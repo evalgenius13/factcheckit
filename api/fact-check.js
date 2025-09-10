@@ -40,7 +40,7 @@ export default async function handler(req, res) {
 RESPONSE FORMAT (JSON):
 {
   "verdict": "TRUE|FALSE|MISLEADING|CANNOT_VERIFY",
-  "explanation": "Brief 1-2 sentence explanation",
+  "explanation": "Exactly 3 sentences: 1) Is it right or wrong, 2) What's the correct answer, 3) Why someone might think this makes sense",
   "sources": [{"title": "Source Name", "url": "https://..."}],
   "formattedResponse": "Social media ready response"
 }
