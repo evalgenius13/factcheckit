@@ -197,20 +197,35 @@
       `;
     }
 
-    function shareResult(shortId) {
-      const shareUrl = `${window.location.origin}/fact/${shortId}`;
-      
-      if (navigator.share) {
-        navigator.share({
-          title: "Fact-CheckIt",
-          url: shareUrl
-        }).catch(err => console.log("Share cancelled", err));
-      } else {
-        navigator.clipboard.writeText(shareUrl).then(() => {
-          alert("Share link copied to clipboard!");
-        });
-      }
-    }
+function shareResult(shortId) {
+  const shareUrl = `${window.location.origin}/fact/${shortId}`;
+  
+  if (navigator.share) {
+    navigator.share({
+      title: "Fact-CheckIt",
+      url: shareUrl
+    }).catch(err => console.log("Share cancelled", err));
+  } else {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      const notice = document.createElement("div");
+      notice.textContent = "✅ Link copied!";
+      notice.style.position = "fixed";
+      notice.style.bottom = "20px";
+      notice.style.right = "20px";
+      notice.style.background = "#4ade80";
+      notice.style.color = "white";
+      notice.style.padding = "8px 12px";
+      notice.style.borderRadius = "6px";
+      notice.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+      notice.style.zIndex = "9999";
+      document.body.appendChild(notice);
+
+      setTimeout(() => {
+        notice.remove();
+      }, 2000);
+    });
+  }
+}
 
     // Auto-fill if claim is in URL or handle /fact/[id] links
     window.addEventListener("DOMContentLoaded", async () => {
