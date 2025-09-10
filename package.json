@@ -5,12 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "start": "node api/fact-check.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.44.4",
-    "node-fetch": "^3.3.2"
+    "@supabase/supabase-js": "^2.44.4"
   }
 }
