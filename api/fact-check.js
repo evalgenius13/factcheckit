@@ -24,43 +24,49 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'Claim too long (max 1000 characters)' });
   }
 
-  // helper: ask OpenAI for a Wikipedia reference link
-  async function getWikipediaPage(subject) {
+  // helper: check Wikipedia and count references
+  async function getWikipediaReferencesNote(subject) {
     try {
-      const prompt = `
-Return ONLY the direct Wikipedia URL ending with "#References" for the subject: "${subject}".
-Rules:
-- Respond ONLY with the URL (no text, no explanation).
-- If no clear Wikipedia page exists, respond with "NONE".
-`;
+      // Step 1: search for page
+      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
+        subject
+      )}&srlimit=1&format=json&origin=*`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'system', content: prompt }],
-          max_tokens: 50,
-          temperature: 0.0,
-        }),
-      });
+      const searchResp = await fetch(searchUrl);
+      if (!searchResp.ok) return "No page with references found for this subject.";
 
-      if (!response.ok) return null;
+      const searchData = await searchResp.json();
+      const firstHit = searchData?.query?.search?.[0];
+      if (!firstHit) return "No page with references found for this subject.";
 
-      const data = await response.json();
-      const url = data.choices?.[0]?.message?.content?.trim();
+      const title = firstHit.title;
 
-      if (!url || url === 'NONE') {
-        return "No sources found.";
+      // Step 2: fetch parsed content with sections
+      const parseUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(
+        title
+      )}&prop=sections|text&format=json&origin=*`;
+
+      const parseResp = await fetch(parseUrl);
+      if (!parseResp.ok) return `The Wikipedia page for ${title} has no accessible references.`;
+
+      const parseData = await parseResp.json();
+      const html = parseData?.parse?.text?.['*'] || '';
+
+      // Step 3: count list items in References section
+      let refCount = 0;
+      if (html) {
+        const matches = html.match(/<li[^>]*>/g);
+        refCount = matches ? matches.length : 0;
       }
 
-      return url;
-    } catch (e) {
-      console.error("Wiki resolver error:", e);
-      return "No sources found.";
+      if (refCount > 0) {
+        return `${title} has a Wikipedia page with ${refCount} references in the References section.`;
+      } else {
+        return `${title} has a Wikipedia page but no references were found.`;
+      }
+    } catch (err) {
+      console.error("Wiki error:", err);
+      return "No page with references found for this subject.";
     }
   }
 
@@ -80,7 +86,7 @@ Rules:
           { role: 'user', content: claim }
         ],
         max_tokens: 400,
-        temperature: 0.1,
+        temperature: 0.01,
       }),
     });
 
@@ -98,13 +104,13 @@ Rules:
 
     const summary = content;
 
-    // Get the Wikipedia reference link
-    const referenceUrl = await getWikipediaPage(claim);
+    // Get Wikipedia reference note
+    const referenceNote = await getWikipediaReferencesNote(claim);
 
     // Save to Supabase
     const { data: insertData, error } = await supabase
       .from('fact_checks')
-      .insert([{ claim, summary, reference_url: referenceUrl }])
+      .insert([{ claim, summary, reference_note: referenceNote }])
       .select('short_id')
       .single();
 
@@ -113,7 +119,12 @@ Rules:
       return res.status(500).json({ success: false, error: 'Failed to save fact-check.' });
     }
 
-    return res.status(200).json({ success: true, summary, referenceUrl, shortId: insertData.short_id });
+    return res.status(200).json({
+      success: true,
+      summary,
+      referenceNote,
+      shortId: insertData.short_id
+    });
   } catch (error) {
     console.error("Handler error:", error);
     return res.status(500).json({ success: false, error: 'Internal server error' });
