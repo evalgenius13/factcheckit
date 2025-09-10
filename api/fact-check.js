@@ -99,7 +99,7 @@ Instructions:
           { role: 'user', content: claim }
         ],
         max_tokens: 400,
-        temperature: 0.0,
+        temperature: 0.1,
       }),
     });
 
