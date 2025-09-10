@@ -106,7 +106,7 @@ Sources:
     } else {
       sources = [
         {
-          title: "No source available — try Google (note: not subject to academic rigor)",
+          title: "No source available — try Google",
           url: "https://www.google.com",
         },
       ];
