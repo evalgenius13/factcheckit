@@ -148,16 +148,29 @@
       const results = document.getElementById('results');
       const explanation = (data.summary || '').trim();
 
-      let linkHtml = '';
-      if (data.referenceUrl) {
-        const isWiki = data.referenceUrl.includes('wikipedia.org');
-        const label = isWiki ? 'View references' : 'Try Google';
-        linkHtml = `
-          <div class="sources">
-            <h4>📚 Reference:</h4>
-            <a href="${data.referenceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">🔗 ${label}</a>
-          </div>`;
-      }
+     let linkHtml = '';
+if (data.referenceUrl && data.referenceUrl !== "No sources found.") {
+  // Show Wikipedia link if it exists
+  const isWiki = data.referenceUrl.includes("wikipedia.org");
+  const label = isWiki ? "View references" : "Reference";
+
+  linkHtml = `
+    <div class="sources">
+      <h4>📚 Reference:</h4>
+      <a href="${data.referenceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">
+        🔗 ${label}
+      </a>
+    </div>
+  `;
+} else {
+  // Show plain text if nothing was found
+  linkHtml = `
+    <div class="sources">
+      <h4>📚 Reference:</h4>
+      <p>No sources found.</p>
+    </div>
+  `;
+}
 
       results.innerHTML = `
         <div class="card result">
