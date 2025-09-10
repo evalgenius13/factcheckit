@@ -136,44 +136,56 @@ export default function Home() {
 
           {/* Results */}
           {result && (
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 animate-fadeIn">
               {result.error ? (
-                <div className="text-red-600 text-center">
-                  <p className="font-medium">Error</p>
-                  <p className="text-sm">{result.error}</p>
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 bg-red-500/20 rounded-full mb-4">
+                    <span className="text-2xl">❌</span>
+                  </div>
+                  <p className="font-semibold text-red-200 mb-2">Error</p>
+                  <p className="text-red-200/80 text-sm">{result.error}</p>
                 </div>
               ) : (
                 <div>
-                  <div className="mb-4">
-                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mb-3 ${
-                      result.verdict === 'TRUE' ? 'bg-green-100 text-green-800' :
-                      result.verdict === 'FALSE' ? 'bg-red-100 text-red-800' :
-                      result.verdict === 'MISLEADING' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
+                  <div className="mb-6">
+                    <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold mb-4 ${
+                      result.verdict === 'TRUE' ? 'bg-green-500/20 text-green-200 border border-green-500/30' :
+                      result.verdict === 'FALSE' ? 'bg-red-500/20 text-red-200 border border-red-500/30' :
+                      result.verdict === 'MISLEADING' ? 'bg-yellow-500/20 text-yellow-200 border border-yellow-500/30' :
+                      'bg-blue-500/20 text-blue-200 border border-blue-500/30'
                     }`}>
-                      {result.verdict === 'TRUE' ? '✅ TRUE' :
-                       result.verdict === 'FALSE' ? '❌ FALSE' :
-                       result.verdict === 'MISLEADING' ? '⚠️ MISLEADING' :
-                       '🔍 CANNOT VERIFY'}
+                      <span className="mr-2">
+                        {result.verdict === 'TRUE' ? '✅' :
+                         result.verdict === 'FALSE' ? '❌' :
+                         result.verdict === 'MISLEADING' ? '⚠️' :
+                         '🔍'}
+                      </span>
+                      {result.verdict === 'TRUE' ? 'VERIFIED TRUE' :
+                       result.verdict === 'FALSE' ? 'FALSE CLAIM' :
+                       result.verdict === 'MISLEADING' ? 'MISLEADING' :
+                       'CANNOT VERIFY'}
                     </div>
                     
-                    <p className="text-gray-800 text-sm leading-relaxed mb-4">
+                    <p className="text-white/90 text-sm leading-relaxed mb-6">
                       {result.explanation}
                     </p>
 
                     {result.sources && result.sources.length > 0 && (
-                      <div className="mb-4">
-                        <p className="text-xs font-medium text-gray-600 mb-2">SOURCES:</p>
-                        <div className="space-y-1">
+                      <div className="mb-6">
+                        <p className="text-xs font-semibold text-white/70 mb-3 flex items-center">
+                          <span className="mr-2">📚</span>
+                          SOURCES:
+                        </p>
+                        <div className="space-y-2">
                           {result.sources.map((source, index) => (
                             <a
                               key={index}
                               href={source.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="block text-xs text-blue-600 hover:text-blue-800 truncate"
+                              className="block text-xs text-blue-300 hover:text-blue-200 truncate bg-white/5 p-2 rounded-lg border border-white/10 hover:border-blue-400/50 transition-all duration-200"
                             >
-                              {source.title}
+                              🔗 {source.title}
                             </a>
                           ))}
                         </div>
@@ -181,28 +193,34 @@ export default function Home() {
                     )}
                   </div>
 
-                  <div className="border-t pt-4">
-                    <div className="mb-3">
-                      <p className="text-xs font-medium text-gray-600 mb-2">
-                        FORMATTED RESPONSE {copied && <span className="text-green-600">(✅ COPIED!)</span>}
+                  <div className="border-t border-white/20 pt-6">
+                    <div className="mb-4">
+                      <p className="text-xs font-semibold text-white/70 mb-3 flex items-center">
+                        <span className="mr-2">📋</span>
+                        FORMATTED RESPONSE 
+                        {copied && <span className="text-green-400 ml-2 animate-pulse">(✅ COPIED!)</span>}
                       </p>
-                      <div className="bg-gray-50 p-3 rounded-lg text-sm font-mono text-gray-800 break-words">
+                      <div className="bg-black/20 backdrop-blur p-4 rounded-xl text-sm font-mono text-white/90 break-words border border-white/10">
                         {result.formattedResponse}
                       </div>
                     </div>
 
-                    {!copied && (
+                    {!copied ? (
                       <button
                         onClick={handleManualCopy}
-                        className="w-full py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm transition-colors"
+                        className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 shadow-xl"
                       >
-                        📋 Copy Response
+                        <span className="flex items-center justify-center">
+                          <span className="mr-2">📋</span>
+                          Copy Response
+                        </span>
                       </button>
-                    )}
-
-                    {copied && (
-                      <div className="text-center text-green-600 font-medium text-sm py-2">
-                        ✅ Ready to paste back to social media!
+                    ) : (
+                      <div className="text-center bg-green-500/20 border border-green-500/30 rounded-xl py-4 px-4">
+                        <div className="text-green-300 font-semibold text-sm flex items-center justify-center">
+                          <span className="mr-2 text-lg">✅</span>
+                          Ready to paste back to social media!
+                        </div>
                       </div>
                     )}
                   </div>
@@ -212,8 +230,16 @@ export default function Home() {
           )}
 
           {/* Footer */}
-          <div className="text-center mt-8 text-xs text-gray-500">
-            <p>Powered by AI • Always verify important claims</p>
+          <div className="text-center mt-8">
+            <p className="text-white/60 text-xs font-medium">
+              <span className="mr-2">🤖</span>
+              Powered by AI • Always verify important claims
+            </p>
+            <div className="mt-3 flex items-center justify-center space-x-4 text-white/40 text-xs">
+              <span>🔒 Secure</span>
+              <span>⚡ Fast</span>
+              <span>🎯 Accurate</span>
+            </div>
           </div>
         </div>
       </div>
