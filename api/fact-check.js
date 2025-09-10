@@ -47,8 +47,9 @@ export default async function handler(req, res) {
 Bust the myth or clarify the claim: "${claim}"
 
 Instructions:
-- Explain in simple, everyday English (avoid rigid or academic wording).
-- Keep it short and clear, like you're talking to a friend.
+- Write a concise, 2–3 sentence summary that corrects or clarifies the claim.
+- Use simple, everyday English (avoid rigid or academic wording).
+- Clearly state what is factually wrong, misleading, or misunderstood and why.
 - Do not copy text directly from Wikipedia.
 `;
 
