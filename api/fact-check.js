@@ -74,7 +74,7 @@ Instructions:
 
     let summary = content.trim();
     if (!summary) {
-      summary = "Sorry, I couldn’t check this claim right now.";
+      summary = "No sources available.";
     }
 
     // Get the Wikipedia page for the subject
