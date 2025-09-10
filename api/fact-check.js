@@ -24,54 +24,27 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'Claim too long (max 1000 characters)' });
   }
 
-  // helper: check Wikipedia and count references
-  async function getWikipediaReferencesNote(subject) {
+  // helper: get multiple possible Wikipedia subjects
+  async function getWikipediaCandidates(subject) {
     try {
-      // Step 1: search for page
       const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
         subject
-      )}&srlimit=1&format=json&origin=*`;
+      )}&srlimit=3&format=json&origin=*`;
 
-      const searchResp = await fetch(searchUrl);
-      if (!searchResp.ok) return "No page with references found for this subject.";
+      const resp = await fetch(searchUrl);
+      if (!resp.ok) return [];
 
-      const searchData = await searchResp.json();
-      const firstHit = searchData?.query?.search?.[0];
-      if (!firstHit) return "No page with references found for this subject.";
-
-      const title = firstHit.title;
-
-      // Step 2: fetch parsed content with sections
-      const parseUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(
-        title
-      )}&prop=sections|text&format=json&origin=*`;
-
-      const parseResp = await fetch(parseUrl);
-      if (!parseResp.ok) return `The Wikipedia page for ${title} has no accessible references.`;
-
-      const parseData = await parseResp.json();
-      const html = parseData?.parse?.text?.['*'] || '';
-
-      // Step 3: count list items in References section
-      let refCount = 0;
-      if (html) {
-        const matches = html.match(/<li[^>]*>/g);
-        refCount = matches ? matches.length : 0;
-      }
-
-      if (refCount > 0) {
-        return `${title} has a Wikipedia page with ${refCount} references in the References section.`;
-      } else {
-        return `${title} has a Wikipedia page but no references were found.`;
-      }
-    } catch (err) {
-      console.error("Wiki error:", err);
-      return "No page with references found for this subject.";
+      const data = await resp.json();
+      const hits = data?.query?.search || [];
+      return hits.map(hit => hit.title);
+    } catch (e) {
+      console.error("Wiki candidate error:", e);
+      return [];
     }
   }
 
   try {
-    const systemPrompt = `Bust the myth or clarify the claim: "${claim}"; Instructions: - Write a concise, 2–3 sentence summary that corrects or clarifies the claim. - If the claim connects a person or invention to something unrelated, clearly say "this is not related" rather than suggesting a connection. - Don't be ambiguous. - Use simple, everyday English (avoid rigid or academic wording). - Clearly state what is factually wrong, misleading, or misunderstood and why. `;
+    const systemPrompt = `Bust the myth or clarify the claim: "${claim}"; Instructions: - Write a concise, 2–3 sentence summary that corrects or clarifies the claim. - If the claim connects a person or invention to something unrelated, clearly say "this is not related". - Use everyday English. - Clearly state what is factually wrong, misleading, or misunderstood and why.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -103,14 +76,16 @@ export default async function handler(req, res) {
     }
 
     const summary = content;
+    const wikiCandidates = await getWikipediaCandidates(claim);
 
-    // Get Wikipedia reference note
-    const referenceNote = await getWikipediaReferencesNote(claim);
+    let referenceNote = null;
+    if (!wikiCandidates.length) {
+      referenceNote = "No page with references found for this subject.";
+    }
 
-    // Save to Supabase
     const { data: insertData, error } = await supabase
       .from('fact_checks')
-      .insert([{ claim, summary, reference_note: referenceNote }])
+      .insert([{ claim, summary }])
       .select('short_id')
       .single();
 
@@ -122,6 +97,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       summary,
+      candidates: wikiCandidates,
       referenceNote,
       shortId: insertData.short_id
     });
