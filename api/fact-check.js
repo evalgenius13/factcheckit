@@ -48,6 +48,7 @@ Bust the myth or clarify the claim: "${claim}"
 
 Instructions:
 - Write a concise, 3-sentence summary that corrects or clarifies the claim.
+- Explain in simple everyday English, like you’re talking to someone with no background in the topic.
 - Clearly state what is factually wrong, misleading, or misunderstood and why.
 - Provide 2–3 sources, but ONLY return Wikipedia links (format as: title + Wikipedia URL).
 - If no reliable sources are available, return a single fallback link to Wikipedia's "List of common misconceptions" page.
