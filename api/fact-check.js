@@ -17,18 +17,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const systemPrompt = `Bust the myth or clarify the claim: "${claim}"; Instructions: 
-    - Write a concise, 2–3 sentence summary that corrects or clarifies the claim. 
-    - If the claim connects a person or invention to something unrelated, clearly say "this is not related".
-    -At the end of every answer, you must include one sentence that begins with the exact words: 
-"According to [Source]"
-    - When using Wikiepedia as a source, list it as Wikipedia References. 
-    - Replace [Source] with the name of the most reliable reference (e.g., Wikipedia, Britannica, a major news outlet).
-    - Always include this sentence on a new line at the end of your output. Never omit it.
-    - Use everyday English. 
-    - Do not inckude links. 
-    - Do not give ambiguous information.
-    - Clearly state what is factually wrong, misleading, or misunderstood and why.`;
+    const systemPrompt = `Bust the myth or clarify the claim: "${claim}"; Instructions:
+- Write a concise, 2–3 sentence summary that directly corrects or clarifies the claim.
+- Use everyday English.
+- Be clear and firm — do not be ambiguous or vague.
+- Clearly state what is factually wrong, misleading, or misunderstood and why.
+- At the end, add one plain text reference on a new line in this format:
+"Reference: Wikipedia" or "Reference: Britannica".
+- Do not include links.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
