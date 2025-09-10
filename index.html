@@ -1,1 +1,705 @@
-test
+// ==========================================
+// File 1: index.html (root folder)
+// ==========================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fact-CheckIt - Instant AI Fact Checking</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 1rem;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding-top: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-text {
+            color: #4ade80;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 1rem;
+        }
+
+        .textarea-container {
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            line-height: 1.5;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            border-color: #667eea;
+        }
+
+        textarea:disabled {
+            background-color: #f9fafb;
+        }
+
+        .char-counter {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 1rem 2rem;
+            margin-top: 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+        }
+
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .result {
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .verdict-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            gap: 0.5rem;
+        }
+
+        .verdict-true {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 2px solid #bbf7d0;
+        }
+
+        .verdict-false {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 2px solid #fecaca;
+        }
+
+        .verdict-misleading {
+            background-color: #fefce8;
+            color: #ca8a04;
+            border: 2px solid #fde047;
+        }
+
+        .verdict-unknown {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border: 2px solid #bfdbfe;
+        }
+
+        .explanation {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
+
+        .sources {
+            margin-bottom: 2rem;
+        }
+
+        .sources h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+        }
+
+        .source-link {
+            display: block;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            color: #2563eb;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .source-link:hover {
+            background-color: #e2e8f0;
+            border-color: #2563eb;
+        }
+
+        .response-section {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 1.5rem;
+        }
+
+        .response-section h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+        }
+
+        .response-code {
+            background-color: #1f2937;
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: Monaco, Consolas, monospace;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            word-break: break-word;
+        }
+
+        .success-message {
+            text-align: center;
+            padding: 1rem;
+            background-color: #d1fae5;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            color: #065f46;
+            font-weight: 600;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-bottom: 2rem;
+        }
+
+        .footer p {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer-badges {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.8rem;
+        }
+
+        .error {
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .error h3 {
+            color: #dc2626;
+            margin-bottom: 0.5rem;
+        }
+
+        .error p {
+            color: #6b7280;
+        }
+
+        .copied-indicator {
+            color: #059669;
+            margin-left: 0.5rem;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🔍</div>
+            <h1>Fact-CheckIt</h1>
+            <p class="subtitle">Paste → Fact-Check → Copy → Done</p>
+            <div class="status">
+                <div class="status-dot"></div>
+                <span class="status-text">AI-Powered</span>
+            </div>
+        </div>
+
+        <!-- Input Form -->
+        <div class="card">
+            <div class="form-group">
+                <label for="claim">📝 Paste the claim to fact-check:</label>
+                <div class="textarea-container">
+                    <textarea 
+                        id="claim" 
+                        placeholder="Paste the comment or claim you want to fact-check..."
+                        oninput="updateCharCount()"
+                    ></textarea>
+                    <div class="char-counter" id="charCounter">0/1000</div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="factCheck()" id="factCheckBtn">
+                ⚡ Fact-Check It!
+            </button>
+        </div>
+
+        <!-- Results -->
+        <div id="results"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>🤖 Powered by AI • Always verify important claims</p>
+        <div class="footer-badges">
+            <span>🔒 Secure</span>
+            <span>⚡ Fast</span>
+            <span>🎯 Accurate</span>
+        </div>
+    </div>
+
+    <script>
+        let isLoading = false;
+
+        function updateCharCount() {
+            const textarea = document.getElementById('claim');
+            const counter = document.getElementById('charCounter');
+            counter.textContent = `${textarea.value.length}/1000`;
+        }
+
+        async function factCheck() {
+            const claim = document.getElementById('claim').value.trim();
+            const btn = document.getElementById('factCheckBtn');
+            const results = document.getElementById('results');
+
+            if (!claim || isLoading) return;
+
+            // Set loading state
+            isLoading = true;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Fact-Checking...';
+            results.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/fact-check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ claim: claim }),
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showResults(data);
+                    // Auto-copy to clipboard
+                    try {
+                        await navigator.clipboard.writeText(data.formattedResponse);
+                        showCopiedState();
+                        // Vibrate on mobile if supported
+                        if (navigator.vibrate) {
+                            navigator.vibrate(100);
+                        }
+                    } catch (error) {
+                        console.log('Auto-copy failed:', error);
+                    }
+                } else {
+                    showError(data.error || 'Something went wrong');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            } finally {
+                // Reset loading state
+                isLoading = false;
+                btn.disabled = false;
+                btn.innerHTML = '⚡ Fact-Check It!';
+            }
+        }
+
+        function showResults(data) {
+            const results = document.getElementById('results');
+            
+            const verdictClass = {
+                'TRUE': 'verdict-true',
+                'FALSE': 'verdict-false',
+                'MISLEADING': 'verdict-misleading'
+            }[data.verdict] || 'verdict-unknown';
+
+            const verdictEmoji = {
+                'TRUE': '✅',
+                'FALSE': '❌',
+                'MISLEADING': '⚠️'
+            }[data.verdict] || '🔍';
+
+            const verdictText = {
+                'TRUE': 'VERIFIED TRUE',
+                'FALSE': 'FALSE CLAIM',
+                'MISLEADING': 'MISLEADING'
+            }[data.verdict] || 'CANNOT VERIFY';
+
+            let sourcesHtml = '';
+            if (data.sources && data.sources.length > 0) {
+                sourcesHtml = `
+                    <div class="sources">
+                        <h4>📚 SOURCES:</h4>
+                        ${data.sources.map(source => `
+                            <a href="${source.url}" target="_blank" rel="noopener noreferrer" class="source-link">
+                                🔗 ${source.title}
+                            </a>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            results.innerHTML = `
+                <div class="card result">
+                    <div class="verdict-badge ${verdictClass}">
+                        <span>${verdictEmoji}</span>
+                        ${verdictText}
+                    </div>
+                    
+                    <p class="explanation">${data.explanation}</p>
+                    
+                    ${sourcesHtml}
+                    
+                    <div class="response-section">
+                        <h4>📋 FORMATTED RESPONSE <span id="copiedIndicator"></span></h4>
+                        <div class="response-code">${data.formattedResponse}</div>
+                        <button class="btn btn-success" onclick="copyResponse('${data.formattedResponse.replace(/'/g, "\\'")}')">
+                            📋 Copy Response
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            const results = document.getElementById('results');
+            results.innerHTML = `
+                <div class="card result">
+                    <div class="error">
+                        <div class="error-icon">❌</div>
+                        <h3>Error</h3>
+                        <p>${message}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function copyResponse(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showCopiedState();
+                if (navigator.vibrate) {
+                    navigator.vibrate(100);
+                }
+            } catch (error) {
+                // Fallback for browsers that don't support clipboard API
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showCopiedState();
+            }
+        }
+
+        function showCopiedState() {
+            const indicator = document.getElementById('copiedIndicator');
+            const btn = document.querySelector('.btn-success');
+            
+            if (indicator) {
+                indicator.innerHTML = '<span class="copied-indicator">(✅ COPIED!)</span>';
+            }
+            
+            if (btn) {
+                btn.innerHTML = '✅ Ready to paste back to social media!';
+                btn.style.background = '#d1fae5';
+                btn.style.color = '#065f46';
+                btn.style.border = '1px solid #a7f3d0';
+                btn.onclick = null;
+                btn.style.cursor = 'default';
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('claim').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                factCheck();
+            }
+        });
+    </script>
+</body>
+</html>
+
+// ==========================================
+// File 2: api/fact-check.js (in api folder)
+// ==========================================
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
+
+  const { claim } = req.body;
+
+  if (!claim || typeof claim !== 'string' || claim.trim().length === 0) {
+    return res.status(400).json({ success: false, error: 'Claim is required' });
+  }
+
+  if (claim.length > 1000) {
+    return res.status(400).json({ success: false, error: 'Claim too long (max 1000 characters)' });
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a fact-checking AI. Analyze claims and provide concise, accurate assessments with sources when possible.
+
+RESPONSE FORMAT (JSON):
+{
+  "verdict": "TRUE|FALSE|MISLEADING|CANNOT_VERIFY",
+  "explanation": "Brief 1-2 sentence explanation",
+  "sources": [{"title": "Source Name", "url": "https://..."}],
+  "formattedResponse": "Social media ready response"
+}
+
+FORMATTED RESPONSE RULES:
+- Start with verdict emoji (✅❌⚠️🔍)
+- Keep under 280 characters for Twitter compatibility
+- Include key facts only
+- End with "- via fact-checkit.com"
+- Be neutral and factual
+
+EXAMPLE:
+"❌ FALSE: Superman budget is $225M, not $400M. Supergirl budget not yet released. Sources: [2 links] - via fact-checkit.com"`
+          },
+          {
+            role: 'user',
+            content: `Fact-check this claim: "${claim}"`
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0]?.message?.content;
+
+    if (!content) {
+      throw new Error('No response from AI');
+    }
+
+    let result;
+    try {
+      result = JSON.parse(content);
+    } catch (parseError) {
+      // Fallback if AI doesn't return valid JSON
+      result = {
+        verdict: 'CANNOT_VERIFY',
+        explanation: content.substring(0, 200),
+        sources: [],
+        formattedResponse: `🔍 ${content.substring(0, 200)}... - via fact-checkit.com`
+      };
+    }
+
+    // Ensure required fields exist
+    result.verdict = result.verdict || 'CANNOT_VERIFY';
+    result.explanation = result.explanation || 'Unable to verify this claim.';
+    result.sources = result.sources || [];
+    result.formattedResponse = result.formattedResponse || `🔍 ${result.explanation} - via fact-checkit.com`;
+
+    return res.status(200).json({
+      success: true,
+      ...result
+    });
+
+  } catch (error) {
+    console.error('Fact-check error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fact-check. Please try again.'
+    });
+  }
+}
