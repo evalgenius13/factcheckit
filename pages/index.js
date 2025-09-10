@@ -216,33 +216,85 @@ export default function Home() {
                         </span>
                       </button>
                     ) : (
-                      <div className="text-center bg-green-500/20 border border-green-500/30 rounded-xl py-4 px-4">
-                        <div className="text-green-300 font-semibold text-sm flex items-center justify-center">
-                          <span className="mr-2 text-lg">✅</span>
-                          Ready to paste back to social media!
-                        </div>
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '1rem',
+                        backgroundColor: '#d1fae5',
+                        border: '1px solid #a7f3d0',
+                        borderRadius: '8px',
+                        color: '#065f46',
+                        fontWeight: '600'
+                      }}>
+                        ✅ Ready to paste back to social media!
                       </div>
                     )}
                   </div>
-                </div>
+                </>
               )}
             </div>
           )}
+        </div>
 
-          {/* Footer */}
-          <div className="text-center mt-8">
-            <p className="text-white/60 text-xs font-medium">
-              <span className="mr-2">🤖</span>
-              Powered by AI • Always verify important claims
-            </p>
-            <div className="mt-3 flex items-center justify-center space-x-4 text-white/40 text-xs">
-              <span>🔒 Secure</span>
-              <span>⚡ Fast</span>
-              <span>🎯 Accurate</span>
-            </div>
+        {/* Footer */}
+        <div style={{
+          textAlign: 'center',
+          marginTop: '3rem',
+          paddingBottom: '2rem'
+        }}>
+          <p style={{
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: '0.9rem',
+            margin: '0 0 1rem 0'
+          }}>
+            🤖 Powered by AI • Always verify important claims
+          </p>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '2rem',
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: '0.8rem'
+          }}>
+            <span>🔒 Secure</span>
+            <span>⚡ Fast</span>
+            <span>🎯 Accurate</span>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @media (max-width: 640px) {
+          h1 {
+            font-size: 2.5rem !important;
+          }
+          
+          .main-content {
+            padding: 1rem !important;
+          }
+        }
+      `}</style>
     </>
   );
 }
