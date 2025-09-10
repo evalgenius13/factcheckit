@@ -1,4 +1,3 @@
-// api/fact-check.js
 export default async function handler(req, res) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,71 +17,38 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Claim too long (max 1000 characters)' });
     }
 
-    // Function-calling tool schema
-    const tools = [
-      {
-        type: 'function',
-        function: {
-          name: 'emit_fact_check',
-          description: 'Return a myth-busting fact check in a strict schema.',
-          parameters: {
-            type: 'object',
-            properties: {
-              verdict: {
-                type: 'string',
-                enum: ['TRUE', 'FALSE', 'MISLEADING', 'CANNOT_VERIFY']
-              },
-              explanation: {
-                type: 'string',
-                description:
-                  'Exactly 3 short sentences: (1) what they actually did, (2) why they are miscredited or how the myth arose, (3) the true fact.'
-              },
-              sources: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    title: { type: 'string' },
-                    url: { type: 'string' }
-                  },
-                  required: ['title', 'url'],
-                  additionalProperties: false
-                }
-              },
-              formattedResponse: {
-                type: 'string',
-                description:
-                  '≤280 chars, start with verdict emoji, end with "- via fact-checkit.com".'
-              }
-            },
-            required: ['verdict', 'explanation', 'sources', 'formattedResponse'],
-            additionalProperties: false
-          }
-        }
-      }
-    ];
-
     const body = {
       model: 'gpt-4o-mini',
-      temperature: 0.1,
+      response_format: { type: 'json_object' }, // ⬅️ force pure JSON content
+      temperature: 0,
       max_tokens: 500,
       messages: [
         {
           role: 'system',
-          content:
-            `You are a myth-busting fact-checker.
-When a person is wrongly credited, ALWAYS cover: (1) what they actually did, (2) why they are miscredited / how the myth arose, (3) the true fact.
-Explain in ≤3 short sentences.
-For sources: use your normal high-quality sources (patents, journals, newspapers), but when possible cite URLs found in Wikipedia reference sections (NOT the article page itself).
-Your output MUST be returned via the emit_fact_check function call. Do NOT write anything outside the function arguments.`
+          content: `You are a myth-busting fact-checker.
+Return a single JSON object only (no extra text).
+
+EXPLANATION MUST BE EXACTLY 3 SHORT SENTENCES IN THIS ORDER:
+1) What the person/thing actually did.
+2) Why they are often wrongly credited (how the internet myth arose).
+3) The true fact.
+
+JSON SHAPE:
+{
+  "verdict": "TRUE|FALSE|MISLEADING|CANNOT_VERIFY",
+  "explanation": "3 short sentences as above.",
+  "sources": [{"title": "Source Name", "url": "https://..."}],
+  "formattedResponse": "≤280 chars, starts with verdict emoji, ends with '- via fact-checkit.com'"
+}
+
+SOURCES: use your normal high-quality sources (patents, journals, newspapers);
+when possible, cite URLs found in a Wikipedia article’s reference list (not the article itself).`
         },
         {
           role: 'user',
           content: `Fact-check this claim: "${claim}"`
         }
-      ],
-      tools,
-      tool_choice: { type: 'function', function: { name: 'emit_fact_check' } }
+      ]
     };
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -101,42 +67,18 @@ Your output MUST be returned via the emit_fact_check function call. Do NOT write
 
     const data = await response.json();
 
-    // Prefer tool call args (strict schema)
-    const choice = data?.choices?.[0];
+    // With response_format: json_object, content is a JSON string/object
+    let content = data?.choices?.[0]?.message?.content;
     let result = null;
 
-    if (choice?.message?.tool_calls?.length) {
-      const tc = choice.message.tool_calls.find(
-        (t) => t.type === 'function' && t.function?.name === 'emit_fact_check'
-      );
-      if (tc?.function?.arguments) {
-        try {
-          result = JSON.parse(tc.function.arguments);
-        } catch (e) {
-          // fall through to content/regex fallback
-        }
-      }
+    if (typeof content === 'string') {
+      try { result = JSON.parse(content); } catch { /* fall through */ }
+    } else if (content && typeof content === 'object') {
+      result = content;
     }
 
-    // Fallbacks if tool call missing (shouldn’t happen, but safe-guard)
-    if (!result) {
-      const content =
-        choice?.message?.content ??
-        choice?.delta?.content ??
-        '';
-      // Try to extract the first JSON object if any stray text appears
-      const firstBrace = content.indexOf('{');
-      const lastBrace = content.lastIndexOf('}');
-      if (firstBrace !== -1 && lastBrace !== -1) {
-        const maybeJson = content.slice(firstBrace, lastBrace + 1);
-        try {
-          result = JSON.parse(maybeJson);
-        } catch (_) { /* ignore */ }
-      }
-    }
-
-    // Final fallback
     if (!result || typeof result !== 'object') {
+      // Last-resort fallback (should rarely trigger)
       result = {
         verdict: 'CANNOT_VERIFY',
         explanation:
@@ -147,7 +89,7 @@ Your output MUST be returned via the emit_fact_check function call. Do NOT write
       };
     }
 
-    // Enforce explanation length to 3 short sentences (safety net)
+    // Safety net: trim explanation to 3 sentences max
     if (typeof result.explanation === 'string') {
       const parts = result.explanation
         .replace(/\s+/g, ' ')
