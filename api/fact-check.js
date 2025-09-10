@@ -44,7 +44,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const systemPrompt = `Bust the myth or clarify the claim: "${claim}"; Instructions: - Write a concise, 2–3 sentence summary that corrects or clarifies the claim. - If the claim connects a person or invention to something unrelated, clearly say "this is not related". - Use everyday English. - Clearly state what is factually wrong, misleading, or misunderstood and why.`;
+    const systemPrompt = `Bust the myth or clarify the claim: "${claim}"; Instructions: - Write a concise, 2–3 sentence summary that corrects or clarifies the claim. - If the claim connects a person or invention to something unrelated, clearly say "this is not related". - Use everyday English. - Clearly state what is factually wrong, misleading, or misunderstood and why. - If you know specific, credible sources that discuss this topic, mention them by name (like "according to NASA" or "studies published in Nature")`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
