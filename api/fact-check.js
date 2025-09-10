@@ -1,3 +1,10 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export default async function handler(req, res) {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -68,12 +75,17 @@ export default async function handler(req, res) {
     const wikiUrl = await getWikipediaPage(claim);
     const referenceUrl = wikiUrl || "https://www.google.com";
 
-    return res.status(200).json({ success: true, summary, referenceUrl });
-  } catch (error) {
-    console.error('Fact-check error:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to fact-check. Please try again.',
-    });
+    // ✅ Save to Supabase
+    const { data: insertData, error } = await supabase
+      .from('fact_checks')
+      .insert([{ claim, summary, reference_url: referenceUrl }])
+      .select('short_id')
+      .single();
+
+    if (error) {
+      console.error("Supabase insert error:", error);
+      return res.status(500).json({ success: false, error: 'Failed to save fact-check.' });
+    }
+
+    return res.status(200).json({ success: true, summary, referenceUrl, shortId: insertData.short_id });
   }
-}
