@@ -17,26 +17,54 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'Claim too long (max 1000 characters)' });
   }
 
-  // helper: fetch refs from Wikipedia
+  // helper: search + fetch refs from Wikipedia
   async function getWikipediaRefs(subject) {
     try {
-      const title = encodeURIComponent(subject.trim().split(" ").slice(0, 6).join(" "));
-      const url = `https://en.wikipedia.org/w/api.php?action=query&prop=extlinks&titles=${title}&ellimit=10&format=json&origin=*`;
+      // Step 1: Search for the most relevant Wikipedia page
+      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
+        subject
+      )}&srlimit=1&format=json&origin=*`;
 
-      const resp = await fetch(url);
-      if (!resp.ok) return { refs: [], pageUrl: `https://en.wikipedia.org/wiki/${title}` };
+      const searchResp = await fetch(searchUrl);
+      if (!searchResp.ok) {
+        return { refs: [], pageUrl: "" };
+      }
+      const searchData = await searchResp.json();
+      const firstHit = searchData?.query?.search?.[0];
+      if (!firstHit) {
+        return {
+          refs: [],
+          pageUrl:
+            "https://en.wikipedia.org/wiki/List_of_common_misconceptions",
+        };
+      }
 
-      const data = await resp.json();
-      const pages = data.query?.pages || {};
+      const pageTitle = firstHit.title;
+      const pageUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(
+        pageTitle
+      )}`;
+
+      // Step 2: Fetch external links from that page
+      const extUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extlinks&titles=${encodeURIComponent(
+        pageTitle
+      )}&ellimit=10&format=json&origin=*`;
+
+      const extResp = await fetch(extUrl);
+      if (!extResp.ok) {
+        return { refs: [], pageUrl };
+      }
+
+      const extData = await extResp.json();
+      const pages = extData.query?.pages || {};
       const page = Object.values(pages)[0];
       const refs = page.extlinks || [];
 
       return {
-        refs: refs.slice(0, 3).map(ref => {
-          const link = ref['*'];
+        refs: refs.slice(0, 3).map((ref) => {
+          const link = ref["*"];
           return { title: link, url: link };
         }),
-        pageUrl: `https://en.wikipedia.org/wiki/${title}`
+        pageUrl,
       };
     } catch (e) {
       console.error("Wiki fetch error:", e);
@@ -103,7 +131,9 @@ Sources:
       sources = [
         {
           title: "No direct sources available, but you can get more information here",
-          url: wikiData.pageUrl || "https://en.wikipedia.org/wiki/List_of_common_misconceptions",
+          url:
+            wikiData.pageUrl ||
+            "https://en.wikipedia.org/wiki/List_of_common_misconceptions",
         },
       ];
     }
