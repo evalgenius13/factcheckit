@@ -9,7 +9,7 @@ export default function Home() {
 
   const handleFactCheck = async () => {
     if (!inputText.trim()) return;
-    
+
     setLoading(true);
     setResult(null);
     setCopied(false);
@@ -24,7 +24,7 @@ export default function Home() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         setResult(data);
         // Auto-copy to clipboard
@@ -86,7 +86,7 @@ export default function Home() {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <div className="max-w-md mx-auto pt-8">
+        <div className="max-w-md w-full mx-auto pt-8 main-content">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -115,9 +115,10 @@ export default function Home() {
             </div>
 
             <button
+              type="button"
               onClick={handleFactCheck}
               disabled={loading || !inputText.trim()}
-              className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-all ${
+              className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-all duration-200 ${
                 loading || !inputText.trim()
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 active:transform active:scale-95'
@@ -146,13 +147,13 @@ export default function Home() {
                   <p className="text-red-200/80 text-sm">{result.error}</p>
                 </div>
               ) : (
-                <div>
+                <>
                   <div className="mb-6">
                     <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold mb-4 ${
-                      result.verdict === 'TRUE' ? 'bg-green-500/20 text-green-200 border border-green-500/30' :
-                      result.verdict === 'FALSE' ? 'bg-red-500/20 text-red-200 border border-red-500/30' :
-                      result.verdict === 'MISLEADING' ? 'bg-yellow-500/20 text-yellow-200 border border-yellow-500/30' :
-                      'bg-blue-500/20 text-blue-200 border border-blue-500/30'
+                      result.verdict === 'TRUE' ? 'bg-green-500/20 text-green-700 border border-green-500/30' :
+                      result.verdict === 'FALSE' ? 'bg-red-500/20 text-red-700 border border-red-500/30' :
+                      result.verdict === 'MISLEADING' ? 'bg-yellow-500/20 text-yellow-700 border border-yellow-500/30' :
+                      'bg-blue-500/20 text-blue-700 border border-blue-500/30'
                     }`}>
                       <span className="mr-2">
                         {result.verdict === 'TRUE' ? '✅' :
@@ -166,13 +167,13 @@ export default function Home() {
                        'CANNOT VERIFY'}
                     </div>
                     
-                    <p className="text-white/90 text-sm leading-relaxed mb-6">
+                    <p className="text-gray-900 text-sm leading-relaxed mb-6">
                       {result.explanation}
                     </p>
 
                     {result.sources && result.sources.length > 0 && (
                       <div className="mb-6">
-                        <p className="text-xs font-semibold text-white/70 mb-3 flex items-center">
+                        <p className="text-xs font-semibold text-gray-700 mb-3 flex items-center">
                           <span className="mr-2">📚</span>
                           SOURCES:
                         </p>
@@ -183,7 +184,7 @@ export default function Home() {
                               href={source.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="block text-xs text-blue-300 hover:text-blue-200 truncate bg-white/5 p-2 rounded-lg border border-white/10 hover:border-blue-400/50 transition-all duration-200"
+                              className="block text-xs text-blue-600 hover:text-blue-800 truncate bg-white/5 p-2 rounded-lg border border-white/10 hover:border-blue-400/50 transition-all duration-200"
                             >
                               🔗 {source.title}
                             </a>
@@ -195,20 +196,21 @@ export default function Home() {
 
                   <div className="border-t border-white/20 pt-6">
                     <div className="mb-4">
-                      <p className="text-xs font-semibold text-white/70 mb-3 flex items-center">
+                      <p className="text-xs font-semibold text-gray-700 mb-3 flex items-center">
                         <span className="mr-2">📋</span>
                         FORMATTED RESPONSE 
-                        {copied && <span className="text-green-400 ml-2 animate-pulse">(✅ COPIED!)</span>}
+                        {copied && <span className="text-green-600 ml-2 animate-pulse">(✅ COPIED!)</span>}
                       </p>
-                      <div className="bg-black/20 backdrop-blur p-4 rounded-xl text-sm font-mono text-white/90 break-words border border-white/10">
+                      <div className="bg-black/20 backdrop-blur p-4 rounded-xl text-sm font-mono text-gray-900 break-words border border-white/10">
                         {result.formattedResponse}
                       </div>
                     </div>
 
                     {!copied ? (
                       <button
+                        type="button"
                         onClick={handleManualCopy}
-                        className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 shadow-xl"
+                        className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold text-sm transition-all duration-200 active:scale-95"
                       >
                         <span className="flex items-center justify-center">
                           <span className="mr-2">📋</span>
@@ -216,15 +218,7 @@ export default function Home() {
                         </span>
                       </button>
                     ) : (
-                      <div style={{
-                        textAlign: 'center',
-                        padding: '1rem',
-                        backgroundColor: '#d1fae5',
-                        border: '1px solid #a7f3d0',
-                        borderRadius: '8px',
-                        color: '#065f46',
-                        fontWeight: '600'
-                      }}>
+                      <div className="text-center p-4 bg-green-100 border border-green-300 rounded-lg text-green-800 font-semibold">
                         ✅ Ready to paste back to social media!
                       </div>
                     )}
@@ -236,26 +230,11 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <div style={{
-          textAlign: 'center',
-          marginTop: '3rem',
-          paddingBottom: '2rem'
-        }}>
-          <p style={{
-            color: 'rgba(255,255,255,0.8)',
-            fontSize: '0.9rem',
-            margin: '0 0 1rem 0'
-          }}>
+        <div className="text-center mt-12 pb-8">
+          <p className="text-gray-700 text-sm mb-4">
             🤖 Powered by AI • Always verify important claims
           </p>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '2rem',
-            color: 'rgba(255,255,255,0.6)',
-            fontSize: '0.8rem'
-          }}>
+          <div className="flex items-center justify-center gap-8 text-gray-500 text-xs">
             <span>🔒 Secure</span>
             <span>⚡ Fast</span>
             <span>🎯 Accurate</span>
@@ -268,12 +247,10 @@ export default function Home() {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.5; }
         }
-        
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        
         @keyframes slideUp {
           from {
             opacity: 0;
@@ -284,12 +261,19 @@ export default function Home() {
             transform: translateY(0);
           }
         }
-        
+        .animate-pulse {
+          animation: pulse 1.2s infinite;
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        .animate-fadeIn {
+          animation: slideUp 0.6s cubic-bezier(.4,0,.2,1) both;
+        }
         @media (max-width: 640px) {
           h1 {
-            font-size: 2.5rem !important;
+            font-size: 2rem !important;
           }
-          
           .main-content {
             padding: 1rem !important;
           }
