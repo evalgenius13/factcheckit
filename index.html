@@ -436,107 +436,81 @@
 
             if (!claim || isLoading) return;
 
-            // Set loading state
-            isLoading = true;
-            btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div> Fact-Checking...';
-            results.innerHTML = '';
+           // Set loading state
+isLoading = true;
+btn.disabled = true;
+btn.innerHTML = '<div class="spinner"></div> Fact-Checking...';
+results.innerHTML = '';
 
-            try {
-                const response = await fetch('/api/fact-check', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ claim: claim }),
-                });
+try {
+  const response = await fetch('/api/fact-check', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ claim: claim }),
+  });
 
-                const data = await response.json();
+  const data = await response.json();
 
-                if (data.success) {
-                    showResults(data);
-                } else {
-                    showError(data.error || 'Something went wrong');
-                }
-            } catch (error) {
-                showError('Network error. Please try again.');
-            } finally {
-                // Reset loading state
-                isLoading = false;
-                btn.disabled = false;
-                btn.innerHTML = '⚡ Fact-Check It!';
-            }
-        }
+  if (data.success) {
+    showResults(data);
+  } else {
+    showError(data.error || 'Something went wrong');
+  }
+} catch (error) {
+  showError('Network error. Please try again.');
+} finally {
+  // Reset loading state
+  isLoading = false;
+  btn.disabled = false;
+  btn.innerHTML = '⚡ Fact-Check It!';
+}
 
-        function showResults(data) {
-            const results = document.getElementById('results');
-            
-            const verdictClass = {
-                'TRUE': 'verdict-true',
-                'FALSE': 'verdict-false',
-                'MISLEADING': 'verdict-misleading'
-            }[data.verdict] || 'verdict-unknown';
+function showResults(data) {
+  const results = document.getElementById('results');
 
-            const verdictEmoji = {
-                'TRUE': '✅',
-                'FALSE': '❌',
-                'MISLEADING': '⚠️'
-            }[data.verdict] || '🔍';
+  const explanation = (data.summary || data.explanation || '').trim();
 
-            const verdictText = {
-                'TRUE': 'VERIFIED TRUE',
-                'FALSE': 'FALSE CLAIM',
-                'MISLEADING': 'MISLEADING'
-            }[data.verdict] || 'CANNOT VERIFY';
+  let sourcesHtml = '';
+  if (data.sources && data.sources.length > 0) {
+    sourcesHtml = `
+      <div class="sources">
+        <h4>📚 SOURCES:</h4>
+        ${data.sources.map(source => `
+          <a href="${source.url}" target="_blank" rel="noopener noreferrer" class="source-link">
+            🔗 ${source.title}
+          </a>
+        `).join('')}
+      </div>
+    `;
+  }
 
-            let sourcesHtml = '';
-            if (data.sources && data.sources.length > 0) {
-                sourcesHtml = `
-                    <div class="sources">
-                        <h4>📚 SOURCES:</h4>
-                        ${data.sources.map(source => `
-                            <a href="${source.url}" target="_blank" rel="noopener noreferrer" class="source-link">
-                                🔗 ${source.title}
-                            </a>
-                        `).join('')}
-                    </div>
-                `;
-            }
+  results.innerHTML = `
+    <div class="card result">
+      <p class="explanation">${explanation}</p>
+      ${sourcesHtml}
+    </div>
+  `;
+}
 
-            results.innerHTML = `
-                <div class="card result">
-                    <div class="verdict-badge ${verdictClass}">
-                        <span>${verdictEmoji}</span>
-                        ${verdictText}
-                    </div>
-                    
-                    <p class="explanation">${data.explanation}</p>
-                    
-                    ${sourcesHtml}
-                </div>
-            `;
-        }
+function showError(message) {
+  const results = document.getElementById('results');
+  results.innerHTML = `
+    <div class="card result">
+      <div class="error">
+        <div class="error-icon">❌</div>
+        <h3>Error</h3>
+        <p>${message}</p>
+      </div>
+    </div>
+  `;
+}
 
-        function showError(message) {
-            const results = document.getElementById('results');
-            results.innerHTML = `
-                <div class="card result">
-                    <div class="error">
-                        <div class="error-icon">❌</div>
-                        <h3>Error</h3>
-                        <p>${message}</p>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Allow Enter key to submit
-        document.getElementById('claim').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                factCheck();
-            }
-        });
-    </script>
-</body>
-</html>
+// Allow Enter key to submit
+document.getElementById('claim').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    factCheck();
+  }
+});
