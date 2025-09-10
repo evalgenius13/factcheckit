@@ -1,6 +1,5 @@
 // api/fact-check.js
 
-// --- Your prompt template (unchanged) ---
 const promptTemplate = (CLAIM) => `
 Bust the myth or clarify the claim: "${CLAIM}"
 
@@ -36,14 +35,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Claim too long (max 1000 characters)' });
     }
 
-    // Messages using your exact template + strict formatting nudge
     const messages = [
       {
         role: 'system',
-        content:
-          `You are a precise myth-busting assistant. Follow the user's format EXACTLY.
+        content: `You are a precise myth-busting assistant. Follow the user's format EXACTLY.
 Return ONLY the formatted text requested (no JSON, no extra commentary, no prefixes, no suffixes).
-Ensure exactly 3 concise sentences in the summary and list 2–3 sources in markdown list form "- [Name](URL)".`
+Ensure exactly 3 concise sentences in the summary.
+
+SOURCES RULES:
+- Always include 2–3 working source links.
+- Sources must be taken from the References/External Links section of Wikipedia articles (use those outbound links, not the Wikipedia page itself).
+- If no suitable Wikipedia references exist, fall back to stable links from patents, academic journals, or major newspapers.
+- Never return a bare Wikipedia article URL as a source.`
       },
       { role: 'user', content: promptTemplate(claim) }
     ];
@@ -71,30 +74,34 @@ Ensure exactly 3 concise sentences in the summary and list 2–3 sources in mark
 
     const data = await response.json();
     const raw = data?.choices?.[0]?.message?.content ?? '';
+    const content = stripOuterCodeFences(raw);
 
-    // --- Parse the model output per your required format ---
-    const content = stripCodeFences(raw).trim();
-
-    // Find the "Sources:" divider (case-insensitive; tolerate spaces/colon)
     const { summaryBlock, sourcesBlock } = splitSummaryAndSources(content);
-
-    // Summary should be a single paragraph (we enforce ≤3 sentences)
     const summary = (summaryBlock || '').replace(/^\[|\]$/g, '').trim();
     const cleanSummary = enforceThreeSentences(summary);
 
-    // Parse sources (markdown links, or fallback to raw URLs)
-    const parsedSources = parseSources(sourcesBlock);
-    const cleanSources = parsedSources.slice(0, 3);
+    const parsedSources = parseSources(sourcesBlock).filter(s => s.url);
+    let cleanSources = parsedSources.slice(0, 3);
 
-    // If model totally ignored the format, keep things non-empty
+    // --- Fallback if no sources found ---
+    if (cleanSources.length === 0) {
+      const wikiSlug = encodeURIComponent(claim.split(' ').slice(0, 4).join('_'));
+      cleanSources = [
+        {
+          title: 'Source retrieval failed — see Wikipedia for more info',
+          url: `https://en.wikipedia.org/wiki/${wikiSlug}`
+        }
+      ];
+    }
+
     const finalSummary =
       cleanSummary ||
-      'This claim is frequently misstated online; consult credible sources for the correct context.';
+      'This claim is often misstated online; consult reliable sources for the correct context.';
 
     return res.status(200).json({
       success: true,
       summary: finalSummary,
-      explanation: finalSummary, // 👈 alias for your existing frontend
+      explanation: finalSummary, // alias for frontend
       sources: cleanSources
     });
   } catch (err) {
@@ -103,99 +110,67 @@ Ensure exactly 3 concise sentences in the summary and list 2–3 sources in mark
   }
 }
 
-/* ---------------------------- helpers ---------------------------- */
+/* ---------------- helpers ---------------- */
 
-function stripCodeFences(text) {
+function stripOuterCodeFences(text) {
   if (!text) return '';
-  // Remove leading/trailing triple backtick blocks if present
-  return text.replace(/^\s*```[\s\S]*?\n?|\n?```$/g, '');
+  const trimmed = String(text).trim();
+  if (trimmed.startsWith('```') && trimmed.endsWith('```')) {
+    return trimmed.slice(3, -3).trim();
+  }
+  return trimmed;
 }
 
 function splitSummaryAndSources(content) {
   if (!content) return { summaryBlock: '', sourcesBlock: '' };
-
-  // Try to split on a standalone "Sources:" line (case-insensitive)
-  const rx = /\n\s*Sources\s*:?\s*\n/i;
-  if (rx.test(content)) {
-    const [summaryBlock, ...rest] = content.split(rx);
-    return { summaryBlock, sourcesBlock: rest.join('\n').trim() };
+  const headerRx = /\n\s*(Sources|References)\s*:?\s*\n/i;
+  if (headerRx.test(content)) {
+    const [summaryBlock, ...rest] = content.split(headerRx);
+    const tail = rest.slice(1).join('');
+    return { summaryBlock: (summaryBlock || '').trim(), sourcesBlock: tail.trim() };
   }
-
-  // Fallback: try to detect the first markdown link list line as start of sources
   const lines = content.split('\n');
-  const idx = lines.findIndex((l) => /^\s*(?:[-*]|\d+\.)\s*\[.+\]\(https?:\/\/[^\s)]+\)/i.test(l));
+  const idx = lines.findIndex((l) =>
+    /\[.+\]\(https?:\/\/[^\s)]+\)/i.test(l)
+  );
   if (idx !== -1) {
-    const summaryBlock = lines.slice(0, idx).join('\n');
-    const sourcesBlock = lines.slice(idx).join('\n');
-    return { summaryBlock, sourcesBlock };
+    return { summaryBlock: lines.slice(0, idx).join('\n'), sourcesBlock: lines.slice(idx).join('\n') };
   }
-
-  // No divider found
-  return { summaryBlock: content, sourcesBlock: '' };
+  return { summaryBlock: content.trim(), sourcesBlock: '' };
 }
 
 function parseSources(sourcesBlock) {
   const out = [];
   if (!sourcesBlock) return out;
-
-  const lines = sourcesBlock.split('\n').map((l) => l.trim()).filter(Boolean);
-
+  const lines = sourcesBlock.split('\n').map(l => l.trim()).filter(Boolean);
   for (const line of lines) {
-    // 1) Proper markdown list with link: - [Title](https://url)
-    let m = line.match(/^(?:[-*]|\d+\.)\s*\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/i);
+    let m = line.match(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/i);
     if (m) {
       out.push({ title: m[1].trim(), url: m[2].trim() });
       continue;
     }
-
-    // 2) Inline markdown link with no leading list bullet: [Title](https://url)
-    m = line.match(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/i);
-    if (m) {
-      out.push({ title: m[1].trim(), url: m[2].trim() });
-      continue;
-    }
-
-    // 3) Raw URL present somewhere on the line -> use hostname as title
     m = line.match(/https?:\/\/[^\s)]+/i);
     if (m) {
       const url = m[0].trim();
-      const title = line.replace(url, '').trim() || hostFromUrl(url);
-      out.push({ title: title || hostFromUrl(url), url });
-      continue;
-    }
-
-    // 4) Last resort: treat the entire line as a title with no URL (skip anchor creation in UI)
-    if (line) {
-      out.push({ title: line, url: '' });
+      out.push({ title: hostFromUrl(url), url });
     }
   }
-
-  // Deduplicate by URL (if present)
   const seen = new Set();
-  return out.filter((s) => {
-    const key = s.url || `title:${s.title.toLowerCase()}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
+  return out.filter(s => {
+    if (seen.has(s.url)) return false;
+    seen.add(s.url);
     return true;
   });
 }
 
 function hostFromUrl(url) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
+  try { return new URL(url).hostname.replace(/^www\./, ''); }
+  catch { return url; }
 }
 
-/**
- * Ensure at most 3 short sentences (your template requires exactly 3; if more, we trim).
- */
 function enforceThreeSentences(text) {
-  if (!text || typeof text !== 'string') return '';
+  if (!text) return '';
   const normalized = text.replace(/\s+/g, ' ').trim();
-  // Split on sentence-ending periods followed by space; simple & effective for short copy
   const parts = normalized.split(/(?<=\.)\s+/);
-  if (parts.length <= 3) return normalized;
-  return parts.slice(0, 3).join(' ');
+  return parts.length > 3 ? parts.slice(0, 3).join(' ') : normalized;
 }
