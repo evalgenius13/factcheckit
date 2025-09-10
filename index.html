@@ -388,16 +388,37 @@
 
       let sourcesHtml = '';
       if (data.sources && data.sources.length > 0) {
-        sourcesHtml = `
-          <div class="sources">
-            <h4>📚 SOURCES:</h4>
-            ${data.sources.map(source => `
-              <a href="${source.url}" target="_blank" rel="noopener noreferrer" class="source-link">
-                🔗 ${source.title}
+        if (
+          data.sources.length === 1 &&
+          data.sources[0].title.startsWith("No direct sources available")
+        ) {
+          // Soft error fallback display
+          sourcesHtml = `
+            <div class="sources">
+              <h4>📚 SOURCES:</h4>
+              <p>${data.sources[0].title}</p>
+              <a href="${data.sources[0].url}" target="_blank" rel="noopener noreferrer" class="source-link">
+                🔗 ${data.sources[0].url}
               </a>
-            `).join('')}
-          </div>
-        `;
+            </div>
+          `;
+        } else {
+          // Normal sources display
+          sourcesHtml = `
+            <div class="sources">
+              <h4>📚 SOURCES:</h4>
+              ${data.sources
+                .map(
+                  source => `
+                  <a href="${source.url}" target="_blank" rel="noopener noreferrer" class="source-link">
+                    🔗 ${source.title}
+                  </a>
+                `
+                )
+                .join('')}
+            </div>
+          `;
+        }
       }
 
       results.innerHTML = `
