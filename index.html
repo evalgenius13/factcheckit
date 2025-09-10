@@ -45,10 +45,6 @@
     .spinner { width: 20px; height: 20px; border: 2px solid transparent; border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite; }
     .result { animation: slideUp 0.4s ease-out; }
     .explanation { font-size: 1.1rem; line-height: 1.6; color: #374151; margin-bottom: 1.5rem; }
-    .sources { margin-bottom: 2rem; }
-    .sources h4 { font-size: 0.9rem; font-weight: 600; color: #6b7280; margin-bottom: 0.75rem; }
-    .source-link { display: block; padding: 0.75rem; margin-bottom: 0.5rem; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; color: #2563eb; text-decoration: none; font-size: 0.9rem; transition: all 0.2s; }
-    .source-link:hover { background-color: #e2e8f0; border-color: #2563eb; }
     .footer { text-align: center; margin-top: 3rem; padding-bottom: 2rem; }
     .footer p { color: rgba(255,255,255,0.8); font-size: 0.9rem; margin-bottom: 1rem; }
     .footer-badges { display: flex; align-items: center; justify-content: center; gap: 2rem; color: rgba(255,255,255,0.6); font-size: 0.8rem; }
@@ -143,38 +139,9 @@
       const results = document.getElementById('results');
       const explanation = (data.summary || '').trim();
 
-      let subjectHtml = '';
-      if (data.candidates && data.candidates.length > 0) {
-        subjectHtml = `
-          <div class="sources">
-            <h4>📚 Choose a subject:</h4>
-            ${data.candidates
-              .map(
-                cand => `
-                <button 
-                  class="btn btn-primary" 
-                  style="margin:0.25rem 0;" 
-                  onclick="selectSubject('${cand}', '${data.shortId}')">
-                  ${cand}
-                </button>
-              `
-              )
-              .join('')}
-          </div>
-        `;
-      } else if (data.referenceNote) {
-        subjectHtml = `
-          <div class="sources">
-            <h4>📚 Reference:</h4>
-            <p>${data.referenceNote}</p>
-          </div>
-        `;
-      }
-
       results.innerHTML = `
         <div class="card result">
           <p class="explanation">${explanation}</p>
-          ${subjectHtml}
           <button 
             class="btn btn-primary" 
             onclick="shareResult('${data.shortId}')">
@@ -182,25 +149,6 @@
           </button>
         </div>
       `;
-    }
-
-    async function selectSubject(subject, shortId) {
-      try {
-        const response = await fetch('/api/wiki-reference', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subject })
-        });
-        const data = await response.json();
-        const refNote = data.referenceNote || "No sources found.";
-        const results = document.getElementById('results');
-        results.insertAdjacentHTML(
-          'beforeend',
-          `<div class="sources"><h4>📚 Reference:</h4><p>${refNote}</p></div>`
-        );
-      } catch (err) {
-        console.error("Error fetching reference:", err);
-      }
     }
 
     function showError(message) {
@@ -250,7 +198,7 @@
           const response = await fetch(`/api/fact?id=${shortId}`);
           const data = await response.json();
           if (data.success) {
-            showResults({ summary: data.summary, referenceNote: data.reference_url, shortId });
+            showResults({ summary: data.summary, shortId });
           } else {
             showError('Fact-check not found.');
           }
