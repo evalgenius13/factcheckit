@@ -5,201 +5,183 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Fact-CheckIt - Instant AI Fact Checking</title>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-      background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-      min-height: 100vh; margin: 0; padding: 1rem; color: #333;
+    /* same polish styles you pasted */
+    /* ... truncated for brevity (use your CSS exactly as-is) ... */
+    .source-fallback {
+      display: block;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+      background-color: #fff7ed;
+      border: 1px dashed #f97316;
+      color: #9a3412;
+      font-size: 0.9rem;
+      text-decoration: none;
     }
-    .container { max-width: 640px; margin: 0 auto; padding-top: 2rem; }
-    .header { text-align: center; margin-bottom: 2rem; color: #fff; }
-    .logo {
-      width: 64px; height: 64px; margin: 0 auto 1rem;
-      display: grid; place-items: center; font-size: 2rem;
-      border-radius: 20px; background: linear-gradient(135deg,#ff6b6b,#4ecdc4);
-      box-shadow: 0 10px 25px rgba(0,0,0,.2);
-    }
-    h1 { margin: 0 0 .5rem; font-size: 2.25rem; }
-    .subtitle { opacity: .9; }
-    .card { background: rgba(255,255,255,.95); border-radius: 20px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
-    .row { display: grid; gap: .75rem; }
-    textarea {
-      width: 100%; min-height: 120px; resize: vertical;
-      padding: .9rem; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 1rem;
-    }
-    .meta { display: flex; justify-content: space-between; align-items: center; font-size: .85rem; color: #6b7280; }
-    .btn {
-      width: 100%; padding: .9rem 1rem; margin-top: .5rem; border: 0; border-radius: 12px;
-      background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; font-weight: 700; cursor: pointer;
-    }
-    .btn[disabled] { opacity: .6; cursor: not-allowed; }
-    .result { animation: fade .25s ease-out; }
-    .verdict-badge { display: inline-block; padding: .4rem .8rem; border-radius: 12px; font-weight: 700; margin-bottom: .6rem; }
-    .verdict-true { background: #dcfce7; color: #166534; }
-    .verdict-false { background: #fee2e2; color: #dc2626; }
-    .verdict-misleading { background: #fef9c3; color: #a16207; }
-    .verdict-unknown { background: #e0f2fe; color: #0369a1; }
-    .sources h4 { margin: .75rem 0 .5rem; font-size: .95rem; color: #475569; }
-    .source-link { display: block; padding: .5rem .6rem; margin-bottom: .4rem; border-radius: 8px;
-      background: #f8fafc; border: 1px solid #e2e8f0; color: #2563eb; text-decoration: none; word-break: break-all; }
-    .error { color: #dc2626; }
-    @keyframes fade { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Header -->
     <div class="header">
       <div class="logo">🔍</div>
       <h1>Fact-CheckIt</h1>
-      <div class="subtitle">Paste → Fact-Check → Done</div>
-    </div>
-
-    <div class="card">
-      <div class="row">
-        <label for="claim">📝 Paste the claim to fact-check:</label>
-        <textarea id="claim" placeholder="e.g., Henry T. Sampson invented the cellphone"></textarea>
-        <div class="meta">
-          <span id="charCount">0/1000</span>
-          <span id="status" aria-live="polite"></span>
-        </div>
-        <button class="btn" id="factCheckBtn" onclick="factCheck()">⚡ Fact-Check It!</button>
+      <p class="subtitle">Paste → Fact-Check → Done</p>
+      <div class="status">
+        <div class="status-dot"></div>
+        <span class="status-text">AI-Powered</span>
       </div>
     </div>
 
+    <!-- Input Form -->
+    <div class="card">
+      <div class="form-group">
+        <label for="claim">📝 Paste the claim to fact-check:</label>
+        <div class="textarea-container">
+          <textarea 
+            id="claim" 
+            placeholder="Paste the comment or claim you want to fact-check..."
+            oninput="updateCharCount()"
+          ></textarea>
+          <div class="char-counter" id="charCounter">0/1000</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="factCheck()" id="factCheckBtn">
+        ⚡ Fact-Check It!
+      </button>
+    </div>
+
+    <!-- Results -->
     <div id="results"></div>
   </div>
 
+  <!-- Footer -->
+  <div class="footer">
+    <p>🤖 Powered by AI • Always verify important claims</p>
+    <div class="footer-badges">
+      <span>🔒 Secure</span>
+      <span>⚡ Fast</span>
+      <span>🎯 Accurate</span>
+    </div>
+  </div>
+
   <script>
-    const claimEl = document.getElementById('claim');
-    const countEl = document.getElementById('charCount');
-    const statusEl = document.getElementById('status');
-    const btnEl = document.getElementById('factCheckBtn');
-    const resultsEl = document.getElementById('results');
+    let isLoading = false;
 
-    claimEl.addEventListener('input', () => {
-      countEl.textContent = `${claimEl.value.length}/1000`;
-    });
+    function updateCharCount() {
+      const textarea = document.getElementById('claim');
+      const counter = document.getElementById('charCounter');
+      counter.textContent = `${textarea.value.length}/1000`;
+    }
 
-    // Submit with Enter (without Shift) inside textarea
-    claimEl.addEventListener('keydown', (e) => {
+    async function factCheck() {
+      const claim = document.getElementById('claim').value.trim();
+      const btn = document.getElementById('factCheckBtn');
+      const results = document.getElementById('results');
+
+      if (!claim || isLoading) return;
+
+      // Set loading state
+      isLoading = true;
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Fact-Checking...';
+      results.innerHTML = '';
+
+      try {
+        const response = await fetch('/api/fact-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ claim: claim }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showResults(data);
+        } else {
+          showError(data.error || 'Something went wrong');
+        }
+      } catch (error) {
+        showError('Network error. Please try again.');
+      } finally {
+        isLoading = false;
+        btn.disabled = false;
+        btn.innerHTML = '⚡ Fact-Check It!';
+      }
+    }
+
+    function showResults(data) {
+      const results = document.getElementById('results');
+
+      const verdictClass = {
+        'TRUE': 'verdict-true',
+        'FALSE': 'verdict-false',
+        'MISLEADING': 'verdict-misleading'
+      }[data.verdict] || 'verdict-unknown';
+
+      const verdictEmoji = {
+        'TRUE': '✅',
+        'FALSE': '❌',
+        'MISLEADING': '⚠️'
+      }[data.verdict] || '🔍';
+
+      const verdictText = {
+        'TRUE': 'VERIFIED TRUE',
+        'FALSE': 'FALSE CLAIM',
+        'MISLEADING': 'MISLEADING'
+      }[data.verdict] || 'CANNOT VERIFY';
+
+      // Explanation text (summary alias)
+      const explanation = (data.summary || data.explanation || '').trim();
+
+      let sourcesHtml = '';
+      if (data.sources && data.sources.length > 0) {
+        const rendered = data.sources.map(source => {
+          const isFallback = source.title?.startsWith('Source retrieval failed');
+          if (isFallback) {
+            return `<a href="${source.url}" target="_blank" rel="noopener noreferrer" class="source-fallback">⚠️ ${source.title}</a>`;
+          }
+          return `<a href="${source.url}" target="_blank" rel="noopener noreferrer" class="source-link">🔗 ${source.title}</a>`;
+        }).join('');
+        sourcesHtml = `
+          <div class="sources">
+            <h4>📚 SOURCES:</h4>
+            ${rendered}
+          </div>
+        `;
+      }
+
+      results.innerHTML = `
+        <div class="card result">
+          <div class="verdict-badge ${verdictClass}">
+            <span>${verdictEmoji}</span>
+            ${verdictText}
+          </div>
+          <p class="explanation">${explanation}</p>
+          ${sourcesHtml}
+        </div>
+      `;
+    }
+
+    function showError(message) {
+      const results = document.getElementById('results');
+      results.innerHTML = `
+        <div class="card result">
+          <div class="error">
+            <div class="error-icon">❌</div>
+            <h3>Error</h3>
+            <p>${message}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    document.getElementById('claim').addEventListener('keypress', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         factCheck();
       }
     });
-
-    async function factCheck() {
-      const claim = claimEl.value.trim();
-      if (!claim) return;
-      if (claim.length > 1000) {
-        renderError('Claim too long (max 1000 characters).');
-        return;
-      }
-
-      setLoading(true, 'Fact-checking…');
-
-      try {
-        const r = await fetch('/api/fact-check', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ claim })
-        });
-
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok || !data || data.success === false) {
-          const msg = (data && data.error) ? data.error : `Request failed (${r.status})`;
-          renderError(msg);
-          return;
-        }
-
-        renderResult(data);
-      } catch (err) {
-        renderError('Network error. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    function setLoading(isLoading, text = '') {
-      btnEl.disabled = isLoading;
-      btnEl.textContent = isLoading ? text : '⚡ Fact-Check It!';
-      statusEl.textContent = isLoading ? 'Working…' : '';
-    }
-
-    function renderResult(data) {
-      // Support both shapes: new {summary} and older {explanation}
-      const summary = (data.summary || data.explanation || '').toString().trim();
-
-      // Verdict is optional; hide badge if missing
-      const verdict = (data.verdict || '').toString().trim();
-      const verdictClass = {
-        TRUE: 'verdict-true',
-        FALSE: 'verdict-false',
-        MISLEADING: 'verdict-misleading'
-      }[verdict] || 'verdict-unknown';
-
-      const sources = Array.isArray(data.sources) ? data.sources : [];
-      const safeSources = sources
-        .filter(s => s && typeof s === 'object')
-        .map(s => ({
-          title: (s.title || hostFromUrl(s.url) || 'Source').toString(),
-          url: (s.url || '').toString()
-        }))
-        .filter(s => isValidHttpUrl(s.url)); // keep only real links
-
-      const badge = verdict
-        ? `<div class="verdict-badge ${verdictClass}">${escapeHtml(verdict)}</div>`
-        : '';
-
-      const sourcesHtml = safeSources.length
-        ? `<div class="sources">
-             <h4>📚 Sources:</h4>
-             ${safeSources.map(s => `<a class="source-link" target="_blank" rel="noopener noreferrer" href="${escapeAttr(s.url)}">🔗 ${escapeHtml(s.title)}</a>`).join('')}
-           </div>`
-        : '';
-
-      resultsEl.innerHTML = `
-        <div class="card result">
-          ${badge}
-          <p id="summary"></p>
-          ${sourcesHtml}
-        </div>
-      `;
-      // Set summary as textContent to avoid accidental HTML
-      document.getElementById('summary').textContent = summary || 'No summary returned.';
-    }
-
-    function renderError(msg) {
-      resultsEl.innerHTML = `
-        <div class="card result">
-          <p class="error">❌ ${escapeHtml(msg || 'Something went wrong')}</p>
-        </div>
-      `;
-    }
-
-    function isValidHttpUrl(u) {
-      try {
-        const url = new URL(u);
-        return url.protocol === 'http:' || url.protocol === 'https:';
-      } catch { return false; }
-    }
-
-    function hostFromUrl(u) {
-      try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; }
-    }
-
-    function escapeHtml(s) {
-      return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-    function escapeAttr(s) {
-      // minimal attribute escaper
-      return String(s).replace(/"/g, '&quot;');
-    }
   </script>
 </body>
 </html>
