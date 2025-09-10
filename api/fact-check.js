@@ -79,6 +79,8 @@ ${pass1}`;
 
 Instructions:
 - Use the claim, the first response, and the critique to form the final, most accurate answer.
+- Do not hedge with phrases like "part of a broader landscape" or "contributed to".
+- State directly what the claim gets wrong and what the actual facts are.
 - Write a concise, 2–3 sentence summary that directly corrects or clarifies the claim.
 - Use everyday English.
 - Be clear and firm — do not be ambiguous or vague.
