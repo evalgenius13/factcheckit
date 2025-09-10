@@ -87,6 +87,7 @@ Instructions:
 - Clearly state what is factually wrong, misleading, or misunderstood and why.
 - At the end, add one plain text reference on a new line in this format:
 "Reference: [Source Name]"
+If the source is Wikipedia, write it as "Reference: Wikipedia Reference List".
 Preferred sources are Wikipedia or Britannica. If the topic is not covered there, use another well-known and reputable source (e.g., CDC, WHO, NASA, major news or academic publications).
 - Do not include links.
 
