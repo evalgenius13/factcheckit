@@ -35,7 +35,7 @@ export default async function handler(req, res) {
         return null;
       }
 
-      return `https://en.wikipedia.org/wiki/${encodeURIComponent(firstHit.title)}`;
+      return `https://en.wikipedia.org/wiki/${encodeURIComponent(firstHit.title)}#References`;
     } catch (e) {
       console.error("Wiki search error:", e);
       return null;
@@ -47,18 +47,9 @@ export default async function handler(req, res) {
 Bust the myth or clarify the claim: "${claim}"
 
 Instructions:
-- Write a concise, 3-sentence summary that corrects or clarifies the claim.
-- Explain in simple everyday English, like you’re talking to someone with no background in the topic.
-- Clearly state what is factually wrong, misleading, or misunderstood and why.
-- Provide 2–3 sources, but ONLY return Wikipedia links (format as: title + Wikipedia URL).
-- If no reliable sources are available, return a single fallback link to Wikipedia's "List of common misconceptions" page.
-
-Format your response as:
-[Myth-busting summary]
-
-Sources:
-- [Source 1 Name](Source 1 URL)
-- [Source 2 Name](Source 2 URL)
+- Explain in simple, everyday English (avoid rigid or academic wording).
+- Keep it short and clear, like you're talking to a friend.
+- Do not copy text directly from Wikipedia.
 `;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -70,8 +61,8 @@ Sources:
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [{ role: 'system', content: systemPrompt }],
-        max_tokens: 500,
-        temperature: 0.2,
+        max_tokens: 400,
+        temperature: 0.3,
       }),
     });
 
@@ -80,40 +71,17 @@ Sources:
     const data = await response.json();
     const content = data.choices[0]?.message?.content || '';
 
-    let summary = '';
-    try {
-      const parts = content.split('Sources:');
-      summary = parts[0].trim();
-    } catch (e) {
-      console.error('Parse error:', e);
-    }
-
-    // Fallback if no summary
+    let summary = content.trim();
     if (!summary) {
-      summary = "Unable to verify this claim at this time.";
+      summary = "Sorry, I couldn’t check this claim right now.";
     }
 
-    // Get the main Wikipedia page for the subject
+    // Get the Wikipedia page for the subject
     const wikiUrl = await getWikipediaPage(claim);
 
-    let sources;
-    if (wikiUrl) {
-      sources = [
-        {
-          title: "Read more on Wikipedia",
-          url: wikiUrl,
-        },
-      ];
-    } else {
-      sources = [
-        {
-          title: "No source available — try Google",
-          url: "https://www.google.com",
-        },
-      ];
-    }
+    const referenceUrl = wikiUrl || "https://www.google.com";
 
-    return res.status(200).json({ success: true, summary, sources });
+    return res.status(200).json({ success: true, summary, referenceUrl });
   } catch (error) {
     console.error('Fact-check error:', error);
     return res.status(500).json({
