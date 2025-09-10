@@ -32,7 +32,8 @@ Instructions:
 - Be clear and firm — do not be ambiguous or vague.
 - Clearly state what is factually wrong, misleading, or misunderstood and why.
 - At the end, add one plain text reference on a new line in this format:
-"Reference: Wikipedia" or "Reference: Britannica".
+"Reference: [Source Name]"
+Preferred sources are Wikipedia or Britannica. If the topic is not covered there, use another well-known and reputable source (e.g., CDC, WHO, NASA, major news or academic publications).
 - Do not include links.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
