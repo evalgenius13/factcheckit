@@ -198,24 +198,29 @@
       `;
     }
 
-    function shareResult(summary) {
-      const teaser = decodeURIComponent(summary).split(".")[0] + "...";
-      const claim = document.getElementById('claim').value.trim();
-      const shareUrl = `${window.location.origin}?claim=${encodeURIComponent(claim)}`;
+function shareResult(summary) {
+  const teaser = decodeURIComponent(summary).split(".")[0] + "...";
+  const claim = document.getElementById('claim').value.trim();
+  const shareUrl = `${window.location.origin}?claim=${encodeURIComponent(claim)}`;
 
-      if (navigator.share) {
-        navigator.share({
-          title: "Fact-CheckIt",
-          text: teaser,
-          url: shareUrl
-        }).catch(err => console.log("Share cancelled", err));
-      } else {
-        const fallbackText = `${teaser}\n\nCheck it here: ${shareUrl}`;
-        navigator.clipboard.writeText(fallbackText).then(() => {
-          alert("Share link copied to clipboard!");
-        });
-      }
-    }
+  // Detect mobile (iOS / Android)
+  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+  if (isMobile && navigator.share) {
+    // Mobile → native share
+    navigator.share({
+      title: "Fact-CheckIt",
+      text: teaser,
+      url: shareUrl
+    }).catch(err => console.log("Share cancelled", err));
+  } else {
+    // Desktop → just copy link
+    const fallbackText = `${teaser}\n\nCheck it here: ${shareUrl}`;
+    navigator.clipboard.writeText(fallbackText).then(() => {
+      alert("✅ Link copied! Paste it anywhere to share.");
+    });
+  }
+}
 
     // Auto-fill if claim is in URL
     window.addEventListener("DOMContentLoaded", () => {
