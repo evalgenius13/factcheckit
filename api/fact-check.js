@@ -1,108 +1,116 @@
-import { createClient } from '@supabase/supabase-js';
+<script>
+  let isLoading = false;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
-export default async function handler(req, res) {
-  // Add CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  function updateCharCount() {
+    const textarea = document.getElementById('claim');
+    const counter = document.getElementById('charCounter');
+    counter.textContent = `${textarea.value.length}/1000`;
   }
 
-  const { claim } = req.body;
-  if (!claim || typeof claim !== 'string' || claim.trim().length === 0) {
-    return res.status(400).json({ success: false, error: 'Claim is required' });
-  }
-  if (claim.length > 1000) {
-    return res.status(400).json({ success: false, error: 'Claim too long (max 1000 characters)' });
-  }
+  async function factCheck() {
+    const claim = document.getElementById('claim').value.trim();
+    const btn = document.getElementById('factCheckBtn');
+    const results = document.getElementById('results');
+    if (!claim || isLoading) return;
 
-  // helper: get multiple possible Wikipedia subjects
-  async function getWikipediaCandidates(subject) {
+    isLoading = true;
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Fact-Checking...';
+    results.innerHTML = '';
+
     try {
-      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
-        subject
-      )}&srlimit=3&format=json&origin=*`;
-
-      const resp = await fetch(searchUrl);
-      if (!resp.ok) return [];
-
-      const data = await resp.json();
-      const hits = data?.query?.search || [];
-      return hits.map(hit => hit.title);
-    } catch (e) {
-      console.error("Wiki candidate error:", e);
-      return [];
+      const response = await fetch('/api/fact-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claim })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showResults(data);
+      } else {
+        showError(data.error || 'Something went wrong');
+      }
+    } catch (err) {
+      showError('Network error. Please try again.');
+    } finally {
+      isLoading = false;
+      btn.disabled = false;
+      btn.innerHTML = '⚡ Fact-Check It!';
     }
   }
 
-  try {
-    const systemPrompt = `Bust the myth or clarify the claim: "${claim}"; Instructions: - Write a concise, 2–3 sentence summary that corrects or clarifies the claim. - If the claim connects a person or invention to something unrelated, clearly say "this is not related". - Use everyday English. - Clearly state what is factually wrong, misleading, or misunderstood and why. - If you know specific, credible sources that discuss this topic, mention them by name (like "according to NASA" or "studies published in Nature")`;
+  function showResults(data) {
+    const results = document.getElementById('results');
+    const explanation = (data.summary || '').trim();
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: claim }
-        ],
-        max_tokens: 400,
-        temperature: 0.01,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("OpenAI API error:", response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content?.trim() || '';
-    if (!content) {
-      return res.status(500).json({ success: false, error: 'No response from AI' });
-    }
-
-    const summary = content;
-    const wikiCandidates = await getWikipediaCandidates(claim);
-
-    let referenceNote = null;
-    if (!wikiCandidates.length) {
-      referenceNote = "No page with references found for this subject.";
-    }
-
-    const { data: insertData, error } = await supabase
-      .from('fact_checks')
-      .insert([{ claim, summary }])
-      .select('short_id')
-      .single();
-
-    if (error) {
-      console.error("Supabase insert error:", error);
-      return res.status(500).json({ success: false, error: 'Failed to save fact-check.' });
-    }
-
-    return res.status(200).json({
-      success: true,
-      summary,
-      candidates: wikiCandidates,
-      referenceNote,
-      shortId: insertData.short_id
-    });
-  } catch (error) {
-    console.error("Handler error:", error);
-    return res.status(500).json({ success: false, error: 'Internal server error' });
+    results.innerHTML = `
+      <div class="card result">
+        <p class="explanation">${explanation}</p>
+        <button 
+          class="btn btn-primary" 
+          onclick="shareResult('${data.shortId}')">
+          🔗 Share this fact-check
+        </button>
+      </div>
+    `;
   }
-}
+
+  function showError(message) {
+    const results = document.getElementById('results');
+    results.innerHTML = `
+      <div class="card result">
+        <div class="error">
+          <div class="error-icon">❌</div>
+          <h3>Error</h3>
+          <p>${message}</p>
+        </div>
+      </div>`;
+  }
+
+  function isMobileDevice() {
+    return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  }
+
+  function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.opacity = '1'; });
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, 2000);
+  }
+
+  function shareResult(shortId) {
+    const shareUrl = `${window.location.origin}/fact/${shortId}`;
+    if (isMobileDevice() && navigator.share) {
+      navigator.share({ title: 'Fact-CheckIt', url: shareUrl }).catch(err => console.log('Share cancelled', err));
+    } else {
+      navigator.clipboard.writeText(shareUrl)
+        .then(() => showToast('✅ Link copied to clipboard!'))
+        .catch(() => showToast('❌ Could not copy link.'));
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    const pathParts = window.location.pathname.split('/');
+    if (pathParts[1] === 'fact' && pathParts[2]) {
+      const shortId = pathParts[2];
+      try {
+        const response = await fetch(`/api/fact?id=${shortId}`);
+        const data = await response.json();
+        if (data.success) {
+          showResults({ summary: data.summary, shortId });
+        } else {
+          showError('Fact-check not found.');
+        }
+      } catch {
+        showError('Error loading fact-check.');
+      }
+    } else {
+      updateCharCount();
+    }
+  });
+</script>
