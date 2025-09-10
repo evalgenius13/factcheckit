@@ -1,4 +1,14 @@
 export default async function handler(req, res) {
+  // Add CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle OPTIONS request for CORS
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
@@ -25,18 +35,30 @@ export default async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content: `You are a fact-checking AI. Analyze claims and provide concise, accurate assessments with sources when possible.
+            content: `You are a myth-busting fact-checker. Focus on debunking common internet myths and viral misinformation with clear explanations.
 
 RESPONSE FORMAT (JSON):
 {
-  "verdict": "TRUE|FALSE|MISLEADING|CANNOT_VERIFY",
-  "explanation": "Brief 1-2 sentence explanation",
+  "verdict": "TRUE|FALSE|MISLEADING|CANNOT_VERIFY", 
+  "explanation": "Brief myth-busting explanation: What's false, what's actually true, and why this myth persists",
   "sources": [{"title": "Source Name", "url": "https://..."}],
   "formattedResponse": "Social media ready response"
 }
 
+MYTH-BUSTING FOCUS:
+- Clearly state what's false about viral claims
+- Provide the correct facts  
+- Explain why people believe the myth (common confusion, viral misinformation, etc.)
+- Identify it as a "common internet myth" when applicable
+
+SOURCE REQUIREMENTS:
+- Find original sources from Wikipedia reference sections, NOT Wikipedia itself
+- Use primary sources like scientific journals, newspapers, patent offices, academic papers
+- Provide working links to actual source documents
+- Example: Use "IEEE Journal" not "Wikipedia page about IEEE"
+
 FORMATTED RESPONSE RULES:
-- Start with verdict emoji (✅❌⚠️🔍)
+- Start with verdict emoji (✅❌⚠️🔍) 
 - Keep under 280 characters for Twitter compatibility
 - Include key facts only
 - End with "- via fact-checkit.com"
