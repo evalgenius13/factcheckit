@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   try {
     const { data, error } = await supabase
       .from('fact_checks')
-      .select('claim, summary')
+      .select('summary')
       .eq('short_id', id)
       .single();
 
@@ -33,7 +33,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      claim: data.claim,
       summary: data.summary
     });
   } catch (e) {
