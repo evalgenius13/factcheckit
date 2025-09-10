@@ -37,7 +37,7 @@ export default async function handler(req, res) {
       if (!firstHit) {
         return null;
       }
-      return `https://en.wikipedia.org/wiki/${encodeURIComponent(firstHit.title)}#References`;
+      return `https://en.wikipedia.org/wiki/${encodeURIComponent(firstHit.title.replace(/ /g, '_'))}#References`;
     } catch (e) {
       console.error("Wiki search error:", e);
       return null;
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const systemPrompt = `Bust the myth or clarify the claim: "${claim}" Instructions: - Write a concise, 2–3 sentence summary that corrects or clarifies the claim. - If the claim connects a person or invention to something unrelated, clearly say "this is not related" rather than suggesting a connection. - Use simple, everyday English (avoid rigid or academic wording). - Clearly state what is factually wrong, misleading, or misunderstood and why. - Do not copy text directly from Wikipedia. ;`;
+    const systemPrompt = `Bust the myth or clarify the claim: "${claim}" Instructions: - Write a concise, 2–3 sentence summary that corrects or clarifies the claim. - If the claim connects a person or invention to something unrelated, clearly say "this is not related" rather than suggesting a connection. - Use simple, everyday English (avoid rigid or academic wording). - Clearly state what is factually wrong, misleading, or misunderstood and why. - Do not copy text directly from Wikipedia.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -61,21 +61,26 @@ export default async function handler(req, res) {
       }),
     });
 
-    if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenAI API error:", response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
 
     const data = await response.json();
-    const content = data.choices[0]?.message?.content || '';
-
-    let summary = content.trim();
-    if (!summary) {
-      summary = "No sources available.";
+    const content = data.choices?.[0]?.message?.content?.trim() || '';
+    
+    if (!content) {
+      return res.status(500).json({ success: false, error: 'No response from AI' });
     }
+
+    let summary = content;
 
     // Get the Wikipedia page for the subject
     const wikiUrl = await getWikipediaPage(claim);
     const referenceUrl = wikiUrl || "https://www.google.com";
 
-    // ✅ Save to Supabase
+    // Save to Supabase
     const { data: insertData, error } = await supabase
       .from('fact_checks')
       .insert([{ claim, summary, reference_url: referenceUrl }])
@@ -88,4 +93,8 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({ success: true, summary, referenceUrl, shortId: insertData.short_id });
+  } catch (error) {
+    console.error("Handler error:", error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
   }
+}
