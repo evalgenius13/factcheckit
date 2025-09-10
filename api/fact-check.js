@@ -24,9 +24,61 @@ export default async function handler(req, res) {
   }
 
   try {
+    // ---- Pass 1 ----
+    const pass1Prompt = `Bust the myth or clarify the claim: "${claim}".
+Write a concise, 2–3 sentence summary that directly corrects or clarifies the claim.
+Use everyday English. Be clear and firm — do not be ambiguous or vague.`;
+
+    const pass1Resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: pass1Prompt },
+          { role: 'user', content: claim }
+        ],
+        max_tokens: 400,
+        temperature: 0.01,
+      }),
+    });
+    const pass1Data = await pass1Resp.json();
+    const pass1 = pass1Data.choices?.[0]?.message?.content?.trim() || '';
+
+    // ---- Pass 2 ----
+    const pass2Prompt = `Review this first response critically. 
+Point out weaknesses, missing context, or any corrections needed.
+
+First response:
+${pass1}`;
+
+    const pass2Resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: pass2Prompt },
+          { role: 'user', content: claim }
+        ],
+        max_tokens: 400,
+        temperature: 0.01,
+      }),
+    });
+    const pass2Data = await pass2Resp.json();
+    const pass2 = pass2Data.choices?.[0]?.message?.content?.trim() || '';
+
+    // ---- Pass 3 (Consensus) ----
     const systemPrompt = `Bust the myth or clarify the claim: "${claim}".
 
 Instructions:
+- Use the claim, the first response, and the critique to form the final, most accurate answer.
 - Write a concise, 2–3 sentence summary that directly corrects or clarifies the claim.
 - Use everyday English.
 - Be clear and firm — do not be ambiguous or vague.
@@ -34,9 +86,15 @@ Instructions:
 - At the end, add one plain text reference on a new line in this format:
 "Reference: [Source Name]"
 Preferred sources are Wikipedia or Britannica. If the topic is not covered there, use another well-known and reputable source (e.g., CDC, WHO, NASA, major news or academic publications).
-- Do not include links.`;
+- Do not include links.
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+First response:
+${pass1}
+
+Critique:
+${pass2}`;
+
+    const finalResp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -53,13 +111,13 @@ Preferred sources are Wikipedia or Britannica. If the topic is not covered there
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("OpenAI API error:", response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+    if (!finalResp.ok) {
+      const errorText = await finalResp.text();
+      console.error("OpenAI API error:", finalResp.status, errorText);
+      throw new Error(`OpenAI API error: ${finalResp.status}`);
     }
 
-    const data = await response.json();
+    const data = await finalResp.json();
     const content = data.choices?.[0]?.message?.content?.trim() || '';
     if (!content) {
       return res.status(500).json({ success: false, error: 'No response from AI' });
