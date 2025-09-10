@@ -1,0 +1,30 @@
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
+
+  const { subject } = req.body;
+  if (!subject) {
+    return res.status(400).json({ success: false, error: 'Subject required' });
+  }
+
+  try {
+    const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(
+      subject
+    )}&prop=references&format=json&origin=*`;
+
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const refs = data?.parse?.references || [];
+
+    const note =
+      refs.length > 0
+        ? `${subject} has a Wikipedia page with ${refs.length} references in the References section.`
+        : `No page with references found for "${subject}".`;
+
+    return res.status(200).json({ success: true, referenceNote: note });
+  } catch (e) {
+    console.error("Wiki reference error:", e);
+    return res.status(500).json({ success: false, error: 'Failed to fetch references' });
+  }
+}
