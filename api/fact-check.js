@@ -17,6 +17,33 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'Claim too long (max 1000 characters)' });
   }
 
+  // helper: fetch refs from Wikipedia
+  async function getWikipediaRefs(subject) {
+    try {
+      const title = encodeURIComponent(subject.trim().split(" ").slice(0, 6).join(" "));
+      const url = `https://en.wikipedia.org/w/api.php?action=query&prop=extlinks&titles=${title}&ellimit=10&format=json&origin=*`;
+
+      const resp = await fetch(url);
+      if (!resp.ok) return { refs: [], pageUrl: `https://en.wikipedia.org/wiki/${title}` };
+
+      const data = await resp.json();
+      const pages = data.query?.pages || {};
+      const page = Object.values(pages)[0];
+      const refs = page.extlinks || [];
+
+      return {
+        refs: refs.slice(0, 3).map(ref => {
+          const link = ref['*'];
+          return { title: link, url: link };
+        }),
+        pageUrl: `https://en.wikipedia.org/wiki/${title}`
+      };
+    } catch (e) {
+      console.error("Wiki fetch error:", e);
+      return { refs: [], pageUrl: "" };
+    }
+  }
+
   try {
     const systemPrompt = `
 Bust the myth or clarify the claim: "${claim}"
@@ -55,36 +82,28 @@ Sources:
     const content = data.choices[0]?.message?.content || '';
 
     let summary = '';
-    let sources = [];
-
     try {
       const parts = content.split('Sources:');
       summary = parts[0].trim();
-
-      if (parts[1]) {
-        sources = parts[1]
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line.startsWith('-'))
-          .map(line => {
-            const match = line.match(/\[(.+?)\]\((https?:\/\/.+?)\)/);
-            return match ? { title: match[1], url: match[2] } : null;
-          })
-          .filter(Boolean);
-      }
     } catch (e) {
       console.error('Parse error:', e);
     }
 
-    // Fallbacks
+    // Fallback if no summary
     if (!summary) {
       summary = "Unable to verify this claim at this time.";
     }
+
+    // Get refs from Wikipedia
+    const wikiData = await getWikipediaRefs(claim);
+    let sources = wikiData.refs;
+
+    // Soft error if no refs
     if (!sources || sources.length === 0) {
       sources = [
         {
-          title: "List of common misconceptions - Wikipedia",
-          url: "https://en.wikipedia.org/wiki/List_of_common_misconceptions",
+          title: "No direct sources available, but you can get more information here",
+          url: wikiData.pageUrl || "https://en.wikipedia.org/wiki/List_of_common_misconceptions",
         },
       ];
     }
