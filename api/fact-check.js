@@ -1,3 +1,10 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -17,14 +24,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const systemPrompt = `Bust the myth or clarify the claim: "${claim}"; Instructions:
+    const systemPrompt = `Bust the myth or clarify the claim: "${claim}".
+
+Instructions:
 - Write a concise, 2–3 sentence summary that directly corrects or clarifies the claim.
 - Use everyday English.
 - Be clear and firm — do not be ambiguous or vague.
 - Clearly state what is factually wrong, misleading, or misunderstood and why.
 - At the end, add one plain text reference on a new line in this format:
-"Reference: [Source Name]"
-Acceptable sources include Wikipedia, Britannica, or a major news or academic site.
+"Reference: Wikipedia" or "Reference: Britannica".
 - Do not include links.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -58,13 +66,22 @@ Acceptable sources include Wikipedia, Britannica, or a major news or academic si
 
     const summary = content;
 
-    // Generate a random shortId (for share links)
-    const shortId = Math.random().toString(36).substring(2, 8);
+    // Save to Supabase
+    const { data: insertData, error } = await supabase
+      .from('fact_checks')
+      .insert([{ claim, summary }])
+      .select('short_id')
+      .single();
+
+    if (error) {
+      console.error("Supabase insert error:", error);
+      return res.status(500).json({ success: false, error: 'Failed to save fact-check.' });
+    }
 
     return res.status(200).json({
       success: true,
       summary,
-      shortId
+      shortId: insertData.short_id
     });
   } catch (error) {
     console.error("Handler error:", error);
