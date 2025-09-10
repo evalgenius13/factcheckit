@@ -35,20 +35,15 @@ export default async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content: `You are a fact-checking AI. Analyze claims and provide concise, clear explanations.
+            content: `You are a fact-checking AI. Analyze claims and provide concise, accurate assessments with sources when possible.
 
 RESPONSE FORMAT (JSON):
 {
   "verdict": "TRUE|FALSE|MISLEADING|CANNOT_VERIFY",
-  "explanation": "Exactly 3 sentences: 1) Is it right or wrong, 2) What's the correct answer, 3) Why someone might think this makes sense",
+  "explanation": "Brief 1-2 sentence explanation",
   "sources": [{"title": "Source Name", "url": "https://..."}],
   "formattedResponse": "Social media ready response"
 }
-
-EXPLANATION STRUCTURE (exactly 3 sentences):
-- Sentence 1: State clearly if the claim is true/false/misleading
-- Sentence 2: Provide the correct/accurate information
-- Sentence 3: Explain why someone might believe the false claim (common misconception, viral misinformation, etc.)
 
 FORMATTED RESPONSE RULES:
 - Start with verdict emoji (✅❌⚠️🔍)
