@@ -1,8 +1,28 @@
+// api/fact-check.js
+
+// --- Prompt template (your spec) ---
+const promptTemplate = (CLAIM) => `
+Bust the myth or clarify the claim: "${CLAIM}"
+
+Instructions:
+- Write a concise, 3-sentence summary that corrects or clarifies the claim.
+- Clearly state what is factually wrong, misleading, or misunderstood and why.
+- List 2–3 credible sources with direct links.
+
+Format your response as:
+[Myth-busting summary]
+
+Sources:
+- [Source 1 Name](Source 1 URL)
+- [Source 2 Name](Source 2 URL)
+`;
+
 export default async function handler(req, res) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -17,38 +37,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Claim too long (max 1000 characters)' });
     }
 
+    // Build messages using your template and a strict system nudge to keep formatting exact
+    const messages = [
+      {
+        role: 'system',
+        content:
+          `You are a precise myth-busting assistant. Follow the user's format EXACTLY.
+Return ONLY the formatted text requested (no JSON, no extra commentary, no prefixes, no suffixes).
+Ensure exactly 3 concise sentences in the summary and list 2–3 sources in markdown list form "[Name](URL)".`
+      },
+      { role: 'user', content: promptTemplate(claim) }
+    ];
+
     const body = {
       model: 'gpt-4o-mini',
-      response_format: { type: 'json_object' }, // ⬅️ force pure JSON content
       temperature: 0,
       max_tokens: 500,
-      messages: [
-        {
-          role: 'system',
-          content: `You are a myth-busting fact-checker.
-Return a single JSON object only (no extra text).
-
-EXPLANATION MUST BE EXACTLY 3 SHORT SENTENCES IN THIS ORDER:
-1) What the person/thing actually did.
-2) Why they are often wrongly credited (how the internet myth arose).
-3) The true fact.
-
-JSON SHAPE:
-{
-  "verdict": "TRUE|FALSE|MISLEADING|CANNOT_VERIFY",
-  "explanation": "3 short sentences as above.",
-  "sources": [{"title": "Source Name", "url": "https://..."}],
-  "formattedResponse": "≤280 chars, starts with verdict emoji, ends with '- via fact-checkit.com'"
-}
-
-SOURCES: use your normal high-quality sources (patents, journals, newspapers);
-when possible, cite URLs found in a Wikipedia article’s reference list (not the article itself).`
-        },
-        {
-          role: 'user',
-          content: `Fact-check this claim: "${claim}"`
-        }
-      ]
+      // We want plain text (markdown) so we can parse it per the template
+      messages
     };
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -66,50 +72,58 @@ when possible, cite URLs found in a Wikipedia article’s reference list (not th
     }
 
     const data = await response.json();
+    const raw = data?.choices?.[0]?.message?.content ?? '';
 
-    // With response_format: json_object, content is a JSON string/object
-    let content = data?.choices?.[0]?.message?.content;
-    let result = null;
+    // --- Parse the model output per your required format ---
+    // Strip code fences if any
+    const content = raw.replace(/^\s*```[\s\S]*?\n?|\n?```$/g, '').trim();
 
-    if (typeof content === 'string') {
-      try { result = JSON.parse(content); } catch { /* fall through */ }
-    } else if (content && typeof content === 'object') {
-      result = content;
-    }
+    // Split at the "Sources:" header (case-insensitive, allow variants like "Sources" with trailing colon)
+    const split = content.split(/\n\s*Sources\s*:\s*\n/i);
+    const summaryBlock = split[0]?.trim() || '';
+    const sourcesBlock = split[1]?.trim() || '';
 
-    if (!result || typeof result !== 'object') {
-      // Last-resort fallback (should rarely trigger)
-      result = {
-        verdict: 'CANNOT_VERIFY',
-        explanation:
-          'Unable to produce a structured result. This may be a common internet myth; please consult reliable sources.',
-        sources: [],
-        formattedResponse:
-          '🔍 Unable to verify with structured output. - via fact-checkit.com'
-      };
-    }
+    // The summary is the first paragraph (per your spec it's a single 3-sentence paragraph)
+    const summary = summaryBlock
+      // Remove any accidental leading/trailing brackets lines
+      .replace(/^\[|\]$/g, '')
+      .trim();
 
-    // Safety net: trim explanation to 3 sentences max
-    if (typeof result.explanation === 'string') {
-      const parts = result.explanation
-        .replace(/\s+/g, ' ')
-        .trim()
-        .split(/(?<=\.)\s+/);
-      if (parts.length > 3) {
-        result.explanation = parts.slice(0, 3).join(' ');
+    // Parse markdown links like: - [Title](https://url)
+    const sources = [];
+    if (sourcesBlock) {
+      const lines = sourcesBlock.split('\n').map((l) => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        const m = line.match(/^-+\s*\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/i);
+        if (m) {
+          sources.push({ title: m[1].trim(), url: m[2].trim() });
+        }
       }
     }
 
-    // Normalize/ensure fields
-    result.verdict = result.verdict || 'CANNOT_VERIFY';
-    if (!Array.isArray(result.sources)) result.sources = [];
-    if (typeof result.formattedResponse !== 'string' || !result.formattedResponse.trim()) {
-      result.formattedResponse = `🔍 ${result.explanation || 'Fact-check complete.'} - via fact-checkit.com`;
-    }
+    // Safety nets
+    const cleanSummary = enforceThreeSentences(summary);
+    const cleanSources = sources.slice(0, 3); // keep 2–3; if more, trim
 
-    return res.status(200).json({ success: true, ...result });
+    return res.status(200).json({
+      success: true,
+      summary: cleanSummary,
+      sources: cleanSources
+    });
   } catch (err) {
     console.error('Fact-check error:', err);
     return res.status(500).json({ success: false, error: 'Failed to fact-check. Please try again.' });
   }
+}
+
+/**
+ * Ensure at most 3 short sentences (your template requires exactly 3;
+ * if the model gives more, we trim; if fewer, we return as-is).
+ */
+function enforceThreeSentences(text) {
+  if (!text || typeof text !== 'string') return '';
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  const parts = normalized.split(/(?<=\.)\s+/); // split by sentence-ending periods
+  if (parts.length <= 3) return normalized;
+  return parts.slice(0, 3).join(' ');
 }
