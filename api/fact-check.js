@@ -34,24 +34,25 @@ export default async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content: `You are a myth-busting fact-checker. 
-Your job is to debunk viral internet myths clearly and concisely. 
+            content: `You are a myth-busting fact-checker.
 
-RESPONSE FORMAT (JSON):
+Your job is to debunk viral internet myths clearly and concisely.
+
+RESPONSE FORMAT (JSON only, no extra text):
 {
   "verdict": "TRUE|FALSE|MISLEADING|CANNOT_VERIFY", 
-  "explanation": "Maximum 3 short sentences. Must include: (1) what the person/thing actually did, (2) why they are often wrongly credited or the myth exists, and (3) the true fact.",
+  "explanation": "Maximum 3 short sentences. Must include: (1) what the person/thing actually did, (2) why they are wrongly credited or the myth exists, and (3) the true fact.",
   "sources": [{"title": "Source Name", "url": "https://..."}],
-  "formattedResponse": "Social media ready response"
+  "formattedResponse": "≤280 chars, starts with emoji verdict, ends with '- via fact-checkit.com'"
 }
 
-RULES:
-- Always explain the origin of the myth or why it persists (e.g. word confusion, viral misinformation, misattribution). 
+Rules:
+- Always explain the origin of the myth or why it persists (confusion, viral misinformation, misattribution).
 - Keep explanations under 3 short sentences.
 - Use neutral, factual tone.
 - Label clearly if it is a 'common internet myth'.
-- Sources: pull from Wikipedia **reference sections only** (not article text), or other primary sources like patents, academic journals, or newspapers. Always return working URLs.
-- Social media response: ≤280 chars, start with emoji verdict, end with "- via fact-checkit.com".`
+- Sources: pull from Wikipedia reference sections or other primary sources only (patents, academic journals, newspapers). Always return working URLs.
+- Absolutely no text outside the JSON response.`
           },
           {
             role: 'user',
@@ -64,11 +65,11 @@ RULES:
     });
 
     if (!response.ok) {
-      throw new Error(\`OpenAI API error: \${response.status}\`);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.choices[0]?.message?.content;
+    const content = data.choices?.[0]?.message?.content;
 
     if (!content) {
       throw new Error('No response from AI');
@@ -78,12 +79,12 @@ RULES:
     try {
       result = JSON.parse(content);
     } catch (parseError) {
-      // Fallback if AI doesn't return valid JSON
+      console.error("❌ JSON parse failed. Raw content:", content);
       result = {
         verdict: 'CANNOT_VERIFY',
         explanation: content.substring(0, 200),
         sources: [],
-        formattedResponse: \`🔍 \${content.substring(0, 200)}... - via fact-checkit.com\`
+        formattedResponse: `🔍 ${content.substring(0, 200)}... - via fact-checkit.com`
       };
     }
 
@@ -91,7 +92,7 @@ RULES:
     result.verdict = result.verdict || 'CANNOT_VERIFY';
     result.explanation = result.explanation || 'Unable to verify this claim.';
     result.sources = result.sources || [];
-    result.formattedResponse = result.formattedResponse || \`🔍 \${result.explanation} - via fact-checkit.com\`;
+    result.formattedResponse = result.formattedResponse || `🔍 ${result.explanation} - via fact-checkit.com`;
 
     return res.status(200).json({
       success: true,
