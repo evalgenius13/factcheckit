@@ -177,8 +177,7 @@
           ${linkHtml}
           <button 
             class="btn btn-primary" 
-            onclick="shareResult(this.dataset.summary)" 
-            data-summary="${encodeURIComponent(data.summary)}">
+            onclick="shareResult('${data.shortId}')">
            🔗 Share this fact-check
           </button>
         </div>
@@ -198,41 +197,46 @@
       `;
     }
 
-function shareResult(summary) {
-  const teaser = decodeURIComponent(summary).split(".")[0] + "...";
-  const claim = document.getElementById('claim').value.trim();
-  const shareUrl = `${window.location.origin}?claim=${encodeURIComponent(claim)}`;
-
-  // Detect mobile (iOS / Android)
-  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-
-  if (isMobile && navigator.share) {
-    // Mobile → native share
-    navigator.share({
-      title: "Fact-CheckIt",
-      text: teaser,
-      url: shareUrl
-    }).catch(err => console.log("Share cancelled", err));
-  } else {
-    // Desktop → just copy link
-    const fallbackText = `${teaser}\n\nCheck it here: ${shareUrl}`;
-    navigator.clipboard.writeText(fallbackText).then(() => {
-      alert("✅ Link copied! Paste it anywhere to share.");
-    });
-  }
-}
-
-    // Auto-fill if claim is in URL
-    window.addEventListener("DOMContentLoaded", () => {
-      const params = new URLSearchParams(window.location.search);
-      const claim = params.get("claim");
-      if (claim) {
-        const textarea = document.getElementById('claim');
-        textarea.value = claim;
-        updateCharCount();
-        factCheck(); // auto-run with shared claim
+    function shareResult(shortId) {
+      const shareUrl = `${window.location.origin}/fact/${shortId}`;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: "Fact-CheckIt",
+          url: shareUrl
+        }).catch(err => console.log("Share cancelled", err));
       } else {
-        updateCharCount(); // ensure counter updates for default text
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          alert("Share link copied to clipboard!");
+        });
+      }
+    }
+
+    // Auto-fill if claim is in URL or handle /fact/[id] links
+    window.addEventListener("DOMContentLoaded", async () => {
+      const pathParts = window.location.pathname.split("/");
+      
+      // Check if URL is like /fact/abc123
+      if (pathParts[1] === "fact" && pathParts[2]) {
+        const shortId = pathParts[2];
+        try {
+          const response = await fetch(`/api/fact?id=${shortId}`);
+          const data = await response.json();
+
+          if (data.success) {
+            showResults({
+              summary: data.summary,
+              referenceUrl: data.reference_url,
+              shortId
+            });
+          } else {
+            showError("Fact-check not found.");
+          }
+        } catch (err) {
+          showError("Error loading fact-check.");
+        }
+      } else {
+        updateCharCount(); // regular behavior
       }
     });
   </script>
