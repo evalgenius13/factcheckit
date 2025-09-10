@@ -62,6 +62,7 @@ Instructions:
 - Write a concise, 2–3 sentence summary that corrects or clarifies the claim.
 - If the claim connects a person or invention to something unrelated, clearly say "this is not related".
 - Use simple, everyday English (avoid rigid or academic wording).
+- Don't be ambiguous.
 - State what is wrong/misleading and why.
 - Do not copy Wikipedia text.
 `;
