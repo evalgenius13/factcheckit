@@ -1,0 +1,16 @@
+{
+  "name": "fact-checkit",
+  "version": "1.0.0",
+  "description": "Fact-CheckIt - Instant AI Fact Checking with Supabase short links",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.44.4",
+    "node-fetch": "^3.3.2"
+  }
+}
