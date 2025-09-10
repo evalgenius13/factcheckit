@@ -1,11 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
-// ✅ Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // server-side secure key
-);
-
 export default async function handler(req, res) {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -28,21 +20,16 @@ export default async function handler(req, res) {
   // helper: find the main Wikipedia page for the subject
   async function getWikipediaPage(subject) {
     try {
-      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
-        subject
-      )}&srlimit=1&format=json&origin=*`;
-
+      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(subject)}&srlimit=1&format=json&origin=*`;
       const resp = await fetch(searchUrl);
       if (!resp.ok) {
         return null;
       }
-
       const data = await resp.json();
       const firstHit = data?.query?.search?.[0];
       if (!firstHit) {
         return null;
       }
-
       return `https://en.wikipedia.org/wiki/${encodeURIComponent(firstHit.title)}#References`;
     } catch (e) {
       console.error("Wiki search error:", e);
@@ -51,16 +38,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const systemPrompt = `
-Bust the myth or clarify the claim: "${claim}"
-
-Instructions:
-- Write a concise, 2–3 sentence summary that corrects or clarifies the claim.
-- If the claim connects a person or invention to something unrelated, clearly say "this is not related" rather than suggesting a connection.
-- Use simple, everyday English (avoid rigid or academic wording).
-- Clearly state what is factually wrong, misleading, or misunderstood and why.
-- Do not copy text directly from Wikipedia.
-`;
+    const systemPrompt = `Bust the myth or clarify the claim: "${claim}" Instructions: - Write a concise, 2–3 sentence summary that corrects or clarifies the claim. - If the claim connects a person or invention to something unrelated, clearly say "this is not related" rather than suggesting a connection. - Use simple, everyday English (avoid rigid or academic wording). - Clearly state what is factually wrong, misleading, or misunderstood and why. - Do not copy text directly from Wikipedia. ;`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -90,27 +68,7 @@ Instructions:
     const wikiUrl = await getWikipediaPage(claim);
     const referenceUrl = wikiUrl || "https://www.google.com";
 
-    // ✅ Save to Supabase and return shortId
-    const { data: insertData, error } = await supabase
-      .from('fact_checks')
-      .insert([{ claim, summary, reference_url: referenceUrl }])
-      .select('short_id')
-      .single();
-
-    if (error) {
-      console.error("Supabase insert error:", error);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to save fact-check.'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      summary,
-      referenceUrl,
-      shortId: insertData.short_id
-    });
+    return res.status(200).json({ success: true, summary, referenceUrl });
   } catch (error) {
     console.error('Fact-check error:', error);
     return res.status(500).json({
