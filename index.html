@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fact-CheckIt - Instant Fact Checking</title>
+  <title>Fact-CheckIt - Instant AI Fact Checking</title>
   <style>
     /* --- your existing CSS unchanged --- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -54,10 +54,10 @@
     <div class="header">
       <div class="logo">🔍</div>
       <h1>Fact-CheckIt</h1>
-      <p class="subtitle">Stop Myths Before They Spread</p>
+      <p class="subtitle">Copy → Paste → Done</p>
       <div class="status">
         <div class="status-dot"></div>
-        <span class="status-text"></span>
+        <span class="status-text">AI-Powered</span>
       </div>
     </div>
 
@@ -160,6 +160,9 @@
         <div class="card result">
           <p class="explanation">${explanation}</p>
           ${linkHtml}
+          <button class="btn btn-primary" onclick="shareResult('${encodeURIComponent(data.summary)}')">
+            🔗 Share this fact-check
+          </button>
         </div>
       `;
     }
@@ -177,11 +180,36 @@
       `;
     }
 
-    // Allow Enter key to submit
-    document.getElementById('claim').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        factCheck();
+    function shareResult(summary) {
+      const teaser = decodeURIComponent(summary).split(".")[0] + "...";
+      const claim = document.getElementById('claim').value.trim();
+      const shareUrl = `${window.location.origin}?claim=${encodeURIComponent(claim)}`;
+
+      if (navigator.share) {
+        navigator.share({
+          title: "Fact-CheckIt",
+          text: teaser,
+          url: shareUrl
+        }).catch(err => console.log("Share cancelled", err));
+      } else {
+        const fallbackText = `${teaser}\n\nCheck it here: ${shareUrl}`;
+        navigator.clipboard.writeText(fallbackText).then(() => {
+          alert("Share link copied to clipboard!");
+        });
+      }
+    }
+
+    // Auto-fill if claim is in URL
+    window.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      const claim = params.get("claim");
+      if (claim) {
+        const textarea = document.getElementById('claim');
+        textarea.value = claim;
+        updateCharCount();
+        factCheck(); // auto-run with shared claim
+      } else {
+        updateCharCount(); // ensure counter updates for default text
       }
     });
   </script>
