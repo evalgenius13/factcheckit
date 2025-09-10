@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Open Graph -->
   <meta property="og:title" content="Fact-CheckIt - Instant Fact Checking" />
@@ -17,8 +17,7 @@
   <meta name="twitter:description" content="Fact-Check Social Posts Fast." />
   <meta name="twitter:image" content="https://fact-checkit.com/logo.png" />
 
-  <link rel="icon" type="image/png" href="/favicon.png">
- 
+  <link rel="icon" type="image/png" href="/favicon.png" />
   <title>Fact-CheckIt - Instant Fact Checking</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -66,7 +65,6 @@
 </head>
 <body>
   <div class="container">
-    <!-- Header -->
     <div class="header">
       <div class="logo">🔍</div>
       <h1>Fact-CheckIt</h1>
@@ -77,7 +75,6 @@
       </div>
     </div>
 
-    <!-- Input Form -->
     <div class="card">
       <div class="form-group">
         <label for="claim">📝 Paste the claim to fact-check:</label>
@@ -89,11 +86,9 @@
       <button class="btn btn-primary" onclick="factCheck()" id="factCheckBtn">⚡ Fact-Check It!</button>
     </div>
 
-    <!-- Results -->
     <div id="results"></div>
   </div>
 
-  <!-- Footer -->
   <div class="footer">
     <p>🤖 Powered by AI • AI stands for Always Investigate. It can make mistakes.</p>
     <div class="footer-badges">
@@ -144,91 +139,58 @@
       }
     }
 
-   function showResults(data) {
-  const results = document.getElementById('results');
-  const explanation = (data.summary || '').trim();
-
-  let noteHtml = '';
-  if (data.referenceNote) {
-    noteHtml = `
-      <div class="sources">
-        <h4>📚 Reference:</h4>
-        <p>${data.referenceNote}</p>
-      </div>
-    `;
-  }
-
-  results.innerHTML = `
-    <div class="card result">
-      <p class="explanation">${explanation}</p>
-      ${noteHtml}
-      <button 
-        class="btn btn-primary" 
-        onclick="shareResult('${data.shortId}')">
-        🔗 Share this fact-check
-      </button>
-    </div>
-  `;
-}
-
-    function showError(message) {
+    function showResults(data) {
       const results = document.getElementById('results');
+      const explanation = (data.summary || '').trim();
+
+      let subjectHtml = '';
+      if (data.candidates && data.candidates.length > 0) {
+        subjectHtml = `
+          <div class="sources">
+            <h4>📚 Choose a subject:</h4>
+            ${data.candidates
+              .map(
+                cand => `
+                <button 
+                  class="btn btn-primary" 
+                  style="margin:0.25rem 0;" 
+                  onclick="selectSubject('${cand}', '${data.shortId}')">
+                  ${cand}
+                </button>
+              `
+              )
+              .join('')}
+          </div>
+        `;
+      } else if (data.referenceNote) {
+        subjectHtml = `
+          <div class="sources">
+            <h4>📚 Reference:</h4>
+            <p>${data.referenceNote}</p>
+          </div>
+        `;
+      }
+
       results.innerHTML = `
         <div class="card result">
-          <div class="error">
-            <div class="error-icon">❌</div>
-            <h3>Error</h3>
-            <p>${message}</p>
-          </div>
-        </div>`;
+          <p class="explanation">${explanation}</p>
+          ${subjectHtml}
+          <button 
+            class="btn btn-primary" 
+            onclick="shareResult('${data.shortId}')">
+            🔗 Share this fact-check
+          </button>
+        </div>
+      `;
     }
 
-    function isMobileDevice() {
-      return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    }
-
-    function showToast(message) {
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-      toast.textContent = message;
-      document.body.appendChild(toast);
-      requestAnimationFrame(() => { toast.style.opacity = '1'; });
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-      }, 2000);
-    }
-
-    function shareResult(shortId) {
-      const shareUrl = `${window.location.origin}/fact/${shortId}`;
-      if (isMobileDevice() && navigator.share) {
-        navigator.share({ title: 'Fact-CheckIt', url: shareUrl }).catch(err => console.log('Share cancelled', err));
-      } else {
-        navigator.clipboard.writeText(shareUrl)
-          .then(() => showToast('✅ Link copied to clipboard!'))
-          .catch(() => showToast('❌ Could not copy link.'));
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      const pathParts = window.location.pathname.split('/');
-      if (pathParts[1] === 'fact' && pathParts[2]) {
-        const shortId = pathParts[2];
-        try {
-          const response = await fetch(`/api/fact?id=${shortId}`);
-          const data = await response.json();
-          if (data.success) {
-            showResults({ summary: data.summary, referenceUrl: data.reference_url, shortId });
-          } else {
-            showError('Fact-check not found.');
-          }
-        } catch {
-          showError('Error loading fact-check.');
-        }
-      } else {
-        updateCharCount();
-      }
-    });
-  </script>
-</body>
-</html>
+    async function selectSubject(subject, shortId) {
+      try {
+        const response = await fetch('/api/wiki-reference', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject })
+        });
+        const data = await response.json();
+        const refNote = data.referenceNote || "No sources found.";
+        const results
