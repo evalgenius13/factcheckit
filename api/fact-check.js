@@ -4,7 +4,6 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Handle OPTIONS request for CORS
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -35,37 +34,24 @@ export default async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content: `You are a myth-busting fact-checker. Focus on debunking common internet myths and viral misinformation with clear explanations.
+            content: `You are a myth-busting fact-checker. 
+Your job is to debunk viral internet myths clearly and concisely. 
 
 RESPONSE FORMAT (JSON):
 {
   "verdict": "TRUE|FALSE|MISLEADING|CANNOT_VERIFY", 
-  "explanation": "Brief myth-busting explanation: What's false, what's actually true, and why this myth persists",
+  "explanation": "Maximum 3 short sentences. Must include: (1) what the person/thing actually did, (2) why they are often wrongly credited or the myth exists, and (3) the true fact.",
   "sources": [{"title": "Source Name", "url": "https://..."}],
   "formattedResponse": "Social media ready response"
 }
 
-MYTH-BUSTING FOCUS:
-- Clearly state what's false about viral claims
-- Provide the correct facts  
-- Explain why people believe the myth (common confusion, viral misinformation, etc.)
-- Identify it as a "common internet myth" when applicable
-
-SOURCE REQUIREMENTS:
-- Find original sources from Wikipedia reference sections, NOT Wikipedia itself
-- Use primary sources like scientific journals, newspapers, patent offices, academic papers
-- Provide working links to actual source documents
-- Example: Use "IEEE Journal" not "Wikipedia page about IEEE"
-
-FORMATTED RESPONSE RULES:
-- Start with verdict emoji (✅❌⚠️🔍) 
-- Keep under 280 characters for Twitter compatibility
-- Include key facts only
-- End with "- via fact-checkit.com"
-- Be neutral and factual
-
-EXAMPLE:
-"❌ FALSE: Superman budget is $225M, not $400M. Supergirl budget not yet released. Sources: [2 links] - via fact-checkit.com"`
+RULES:
+- Always explain the origin of the myth or why it persists (e.g. word confusion, viral misinformation, misattribution). 
+- Keep explanations under 3 short sentences.
+- Use neutral, factual tone.
+- Label clearly if it is a 'common internet myth'.
+- Sources: pull from Wikipedia **reference sections only** (not article text), or other primary sources like patents, academic journals, or newspapers. Always return working URLs.
+- Social media response: ≤280 chars, start with emoji verdict, end with "- via fact-checkit.com".`
           },
           {
             role: 'user',
@@ -78,7 +64,7 @@ EXAMPLE:
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      throw new Error(\`OpenAI API error: \${response.status}\`);
     }
 
     const data = await response.json();
@@ -97,7 +83,7 @@ EXAMPLE:
         verdict: 'CANNOT_VERIFY',
         explanation: content.substring(0, 200),
         sources: [],
-        formattedResponse: `🔍 ${content.substring(0, 200)}... - via fact-checkit.com`
+        formattedResponse: \`🔍 \${content.substring(0, 200)}... - via fact-checkit.com\`
       };
     }
 
@@ -105,7 +91,7 @@ EXAMPLE:
     result.verdict = result.verdict || 'CANNOT_VERIFY';
     result.explanation = result.explanation || 'Unable to verify this claim.';
     result.sources = result.sources || [];
-    result.formattedResponse = result.formattedResponse || `🔍 ${result.explanation} - via fact-checkit.com`;
+    result.formattedResponse = result.formattedResponse || \`🔍 \${result.explanation} - via fact-checkit.com\`;
 
     return res.status(200).json({
       success: true,
