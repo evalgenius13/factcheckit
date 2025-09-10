@@ -144,41 +144,32 @@
       }
     }
 
-    function showResults(data) {
-      const results = document.getElementById('results');
-      const explanation = (data.summary || '').trim();
+   function showResults(data) {
+  const results = document.getElementById('results');
+  const explanation = (data.summary || '').trim();
 
-     let linkHtml = '';
-if (data.referenceUrl && data.referenceUrl !== "No sources found.") {
-  // Show Wikipedia link if it exists
-  const isWiki = data.referenceUrl.includes("wikipedia.org");
-  const label = isWiki ? "View references" : "Reference";
+  let noteHtml = '';
+  if (data.referenceNote) {
+    noteHtml = `
+      <div class="sources">
+        <h4>📚 Reference:</h4>
+        <p>${data.referenceNote}</p>
+      </div>
+    `;
+  }
 
-  linkHtml = `
-    <div class="sources">
-      <h4>📚 Reference:</h4>
-      <a href="${data.referenceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">
-        🔗 ${label}
-      </a>
-    </div>
-  `;
-} else {
-  // Show plain text if nothing was found
-  linkHtml = `
-    <div class="sources">
-      <h4>📚 Reference:</h4>
-      <p>No sources found.</p>
+  results.innerHTML = `
+    <div class="card result">
+      <p class="explanation">${explanation}</p>
+      ${noteHtml}
+      <button 
+        class="btn btn-primary" 
+        onclick="shareResult('${data.shortId}')">
+        🔗 Share this fact-check
+      </button>
     </div>
   `;
 }
-
-      results.innerHTML = `
-        <div class="card result">
-          <p class="explanation">${explanation}</p>
-          ${linkHtml}
-          <button class="btn btn-primary" onclick="shareResult('${data.shortId}')">🔗 Share this fact-check</button>
-        </div>`;
-    }
 
     function showError(message) {
       const results = document.getElementById('results');
