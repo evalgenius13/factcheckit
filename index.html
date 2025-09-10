@@ -443,7 +443,7 @@
             results.innerHTML = '';
 
             try {
-                const response = await fetch('/api/fact-check', {
+                const response = await fetch('pages/api/fact-check', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
