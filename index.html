@@ -175,8 +175,11 @@
         <div class="card result">
           <p class="explanation">${explanation}</p>
           ${linkHtml}
-          <button class="btn btn-primary" onclick="shareResult('${encodeURIComponent(data.summary)}')">
-            🔗 Share this fact-check
+          <button 
+            class="btn btn-primary" 
+            onclick="shareResult(this.dataset.summary)" 
+            data-summary="${encodeURIComponent(data.summary)}">
+           🔗 Share this fact-check
           </button>
         </div>
       `;
