@@ -193,4 +193,74 @@
         });
         const data = await response.json();
         const refNote = data.referenceNote || "No sources found.";
-        const results
+        const results = document.getElementById('results');
+        results.insertAdjacentHTML(
+          'beforeend',
+          `<div class="sources"><h4>📚 Reference:</h4><p>${refNote}</p></div>`
+        );
+      } catch (err) {
+        console.error("Error fetching reference:", err);
+      }
+    }
+
+    function showError(message) {
+      const results = document.getElementById('results');
+      results.innerHTML = `
+        <div class="card result">
+          <div class="error">
+            <div class="error-icon">❌</div>
+            <h3>Error</h3>
+            <p>${message}</p>
+          </div>
+        </div>`;
+    }
+
+    function isMobileDevice() {
+      return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    function showToast(message) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      requestAnimationFrame(() => { toast.style.opacity = '1'; });
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    }
+
+    function shareResult(shortId) {
+      const shareUrl = `${window.location.origin}/fact/${shortId}`;
+      if (isMobileDevice() && navigator.share) {
+        navigator.share({ title: 'Fact-CheckIt', url: shareUrl }).catch(err => console.log('Share cancelled', err));
+      } else {
+        navigator.clipboard.writeText(shareUrl)
+          .then(() => showToast('✅ Link copied to clipboard!'))
+          .catch(() => showToast('❌ Could not copy link.'));
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const pathParts = window.location.pathname.split('/');
+      if (pathParts[1] === 'fact' && pathParts[2]) {
+        const shortId = pathParts[2];
+        try {
+          const response = await fetch(`/api/fact?id=${shortId}`);
+          const data = await response.json();
+          if (data.success) {
+            showResults({ summary: data.summary, referenceNote: data.reference_url, shortId });
+          } else {
+            showError('Fact-check not found.');
+          }
+        } catch {
+          showError('Error loading fact-check.');
+        }
+      } else {
+        updateCharCount();
+      }
+    });
+  </script>
+</body>
+</html>
