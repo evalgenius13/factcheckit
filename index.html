@@ -144,11 +144,14 @@
 
       let linkHtml = '';
       if (data.referenceUrl) {
+        const isWiki = data.referenceUrl.includes("wikipedia.org");
+        const label = isWiki ? "View references" : "Try Google";
+
         linkHtml = `
           <div class="sources">
             <h4>📚 Reference:</h4>
             <a href="${data.referenceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">
-              🔗 View references
+              🔗 ${label}
             </a>
           </div>
         `;
