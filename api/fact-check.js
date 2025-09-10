@@ -23,7 +23,8 @@ export default async function handler(req, res) {
 - Be clear and firm — do not be ambiguous or vague.
 - Clearly state what is factually wrong, misleading, or misunderstood and why.
 - At the end, add one plain text reference on a new line in this format:
-"Reference: Wikipedia" or "Reference: Britannica".
+"Reference: [Source Name]"
+Acceptable sources include Wikipedia, Britannica, or a major news or academic site.
 - Do not include links.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
