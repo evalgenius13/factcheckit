@@ -381,7 +381,7 @@
         <div class="header">
             <div class="logo">🔍</div>
             <h1>Fact-CheckIt</h1>
-            <p class="subtitle">Paste → Fact-Check → Copy → Done</p>
+            <p class="subtitle">Copy → Paste → Done</p>
             <div class="status">
                 <div class="status-dot"></div>
                 <span class="status-text">AI-Powered</span>
@@ -455,17 +455,6 @@
 
                 if (data.success) {
                     showResults(data);
-                    // Auto-copy to clipboard
-                    try {
-                        await navigator.clipboard.writeText(data.formattedResponse);
-                        showCopiedState();
-                        // Vibrate on mobile if supported
-                        if (navigator.vibrate) {
-                            navigator.vibrate(100);
-                        }
-                    } catch (error) {
-                        console.log('Auto-copy failed:', error);
-                    }
                 } else {
                     showError(data.error || 'Something went wrong');
                 }
@@ -539,43 +528,6 @@
                     </div>
                 </div>
             `;
-        }
-
-        async function copyResponse(text) {
-            try {
-                await navigator.clipboard.writeText(text);
-                showCopiedState();
-                if (navigator.vibrate) {
-                    navigator.vibrate(100);
-                }
-            } catch (error) {
-                // Fallback for browsers that don't support clipboard API
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                showCopiedState();
-            }
-        }
-
-        function showCopiedState() {
-            const indicator = document.getElementById('copiedIndicator');
-            const btn = document.querySelector('.btn-success');
-            
-            if (indicator) {
-                indicator.innerHTML = '<span class="copied-indicator">(✅ COPIED!)</span>';
-            }
-            
-            if (btn) {
-                btn.innerHTML = '✅ Ready to paste back to social media!';
-                btn.style.background = '#d1fae5';
-                btn.style.color = '#065f46';
-                btn.style.border = '1px solid #a7f3d0';
-                btn.onclick = null;
-                btn.style.cursor = 'default';
-            }
         }
 
         // Allow Enter key to submit
